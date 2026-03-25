@@ -48,7 +48,7 @@ export function DashboardIdeas({ picks }: { picks: Pick[] }) {
         <h2 className="text-2xl font-semibold tracking-tight">No ideas yet. Tap below to generate today&apos;s picks.</h2>
         <p className="mt-3 text-sm text-muted-foreground">Vibed Hunter will turn fresh trends into creator-ready ideas for you.</p>
         <Button asChild className="mt-6 h-12 rounded-2xl px-6 text-base">
-          <Link href="/bot">Get today&apos;s ideas</Link>
+          <Link href="/">Get today&apos;s ideas</Link>
         </Button>
       </section>
     );

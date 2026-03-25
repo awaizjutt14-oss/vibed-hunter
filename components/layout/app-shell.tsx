@@ -13,7 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
         <header className="sticky top-4 z-20 mb-8 rounded-[1.75rem] border border-white/10 bg-card/85 px-4 py-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3">
               <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-primary">
                 <Sparkles className="h-5 w-5" />
               </div>

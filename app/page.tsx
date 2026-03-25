@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
+import { RemixHome } from "@/components/vibed/remix-home";
 
 export default function Home() {
-  redirect("/remix");
+  return (
+    <AppShell>
+      <RemixHome />
+    </AppShell>
+  );
 }
