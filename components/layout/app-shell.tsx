@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { Bookmark, Brain, Settings, Sparkles } from "lucide-react";
+import { Bookmark, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
-  { href: "/dashboard", label: "Today", icon: Sparkles },
-  { href: "/content-brain", label: "Content Brain", icon: Brain },
   { href: "/saved", label: "Saved", icon: Bookmark },
   { href: "/settings", label: "Settings", icon: Settings }
 ];
