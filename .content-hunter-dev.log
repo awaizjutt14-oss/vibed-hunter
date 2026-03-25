@@ -1,0 +1,14 @@
+
+> content-hunter-ai@0.1.0 dev
+> next dev --hostname 0.0.0.0 --port 50000
+
+ ⨯ Failed to start server
+Error: listen EPERM: operation not permitted 0.0.0.0:50000
+    at <unknown> (Error: listen EPERM: operation not permitted 0.0.0.0:50000) {
+  code: 'EPERM',
+  errno: -1,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 50000
+}
+[?25h

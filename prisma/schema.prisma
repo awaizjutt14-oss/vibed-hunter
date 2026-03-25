@@ -1,0 +1,374 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  RSS
+  NEWS_API
+  REDDIT
+  YOUTUBE
+  GOOGLE_TRENDS
+  SITEMAP
+  CUSTOM
+  MANUAL
+}
+
+enum TopicStatus {
+  ACTIVE
+  DISMISSED
+  ARCHIVED
+}
+
+enum PacketStatus {
+  DRAFT
+  READY
+  EXPORTED
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum AssetType {
+  HOOK
+  CAPTION
+  SCRIPT
+  CAROUSEL
+  THUMBNAIL
+  CTA
+  KEYWORDS
+  RISK_NOTE
+}
+
+model BrainProfile {
+  id               String    @id @default(cuid())
+  name             String    @default("Vibed Brain")
+  versionLabel     String    @default("Default")
+  preferredTraits  String[]
+  dislikedTraits   String[]
+  hookPreferences  Json
+  captionDNA       Json
+  tasteProfile     Json
+  rejectionRules   String[]
+  tieBreakWeights  Json
+  approvedSources  Json?
+  topicHistory     Json?
+  postOutcomes     Json?
+  driftAlerts      Json?
+  pendingPatterns  Json?
+  isActive         Boolean   @default(true)
+  isDefault        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
+model InstagramAccount {
+  id            String   @id @default(cuid())
+  userId        String?
+  igUserId      String   @unique
+  username      String
+  accountType   String?
+  accessToken   String
+  expiresAt     DateTime?
+  permissions   String[]
+  lastSyncedAt  DateTime?
+  status        String   @default("connected")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model InstagramMedia {
+  id           String   @id @default(cuid())
+  igId         String   @unique
+  accountId    String
+  caption      String?
+  mediaType    String?
+  mediaUrl     String?
+  permalink    String?
+  timestamp    DateTime?
+  likeCount    Int?
+  commentCount Int?
+  viewCount    Int?
+  reach        Int?
+  saves        Int?
+  plays        Int?
+  impressions  Int?
+  insightsRaw  Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([accountId, timestamp])
+}
+
+model BrainFeedback {
+  id               String    @id @default(cuid())
+  opportunityId    String    @unique
+  rating           String
+  reasons          String[]
+  profileSnapshot  Json
+  createdAt        DateTime  @default(now())
+}
+
+model BrainExample {
+  id        String   @id @default(cuid())
+  type      String
+  text      String
+  quality   String
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id              String        @id @default(cuid())
+  email           String        @unique
+  name            String?
+  image           String?
+  role            String        @default("USER")
+  passwordHash    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  settings        UserSettings?
+  sources         Source[]
+  packets         ContentPacket[]
+  keywordWatches  KeywordWatch[]
+  digests         DigestRun[]
+  savedIdeas      SavedIdea[]
+  jobRuns         JobRun[]
+  auditLogs       AuditLog[]
+}
+
+model UserSettings {
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  niches                    String[]
+  bannedTopics              String[]
+  preferredTone             String   @default("premium")
+  targetAudienceCountry     String   @default("US")
+  platformFocus             String[]
+  captionStyle              String   @default("punchy")
+  minimumOriginalityScore   Int      @default(65)
+  preferredPostingTimes     String[]
+  brandVoiceExamples        String[]
+  contentLengthPreferences  Json?
+  scoringWeights            Json?
+  highConfidenceOnly        Boolean  @default(false)
+  dailyDigestEnabled        Boolean  @default(true)
+  digestEmail               String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Source {
+  id             String      @id @default(cuid())
+  userId         String?
+  name           String
+  sourceType     SourceType
+  url            String
+  region         String?
+  language       String?     @default("en")
+  isActive       Boolean     @default(true)
+  connectorKey   String
+  tags           String[]
+  pollingMinutes Int         @default(60)
+  lastFetchedAt  DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items          SourceItem[]
+
+  @@unique([sourceType, url])
+  @@index([userId, isActive])
+}
+
+model SourceItem {
+  id                String      @id @default(cuid())
+  sourceId          String
+  dedupeKey         String      @unique
+  title             String
+  sourceName        String
+  sourceType        SourceType
+  url               String
+  publishTime       DateTime?
+  topicTags         String[]
+  region            String?
+  language          String?     @default("en")
+  engagementSignals Json?
+  rawSummary        String?
+  metadata          Json?
+  clusterId         String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  source            Source      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  cluster           TopicCluster? @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+
+  @@index([sourceId, publishTime])
+  @@index([clusterId])
+  @@index([title, publishTime])
+}
+
+model TopicCluster {
+  id                String         @id @default(cuid())
+  slug              String         @unique
+  canonicalTitle    String
+  summary           String
+  whyNow            String
+  niche             String
+  region            String?
+  language          String?        @default("en")
+  sourceCount       Int            @default(0)
+  bestPlatform      String?
+  publishUrgency    String         @default("medium")
+  status            TopicStatus    @default(ACTIVE)
+  dedupeFingerprint String         @unique
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  sourceItems       SourceItem[]
+  trendScores       TrendScore[]
+  packets           ContentPacket[]
+  savedBy           SavedIdea[]
+
+  @@index([status, updatedAt])
+  @@index([niche, updatedAt])
+}
+
+model TrendScore {
+  id                      String      @id @default(cuid())
+  clusterId               String
+  freshnessScore          Float
+  momentumScore           Float
+  audienceFitScore        Float
+  originalityPotential    Float
+  visualContentScore      Float
+  postabilityScore        Float
+  noveltyScore            Float
+  sourceDiversityScore    Float
+  emotionalPullScore      Float
+  finalScore              Float
+  explanation             Json
+  createdAt               DateTime    @default(now())
+  cluster                 TopicCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@index([clusterId, finalScore])
+  @@index([createdAt])
+}
+
+model ContentPacket {
+  id                 String         @id @default(cuid())
+  userId             String
+  clusterId          String
+  status             PacketStatus   @default(DRAFT)
+  conciseSummary     String
+  originalityNote    String
+  whyTrending        String
+  bestPlatform       String
+  publishTiming      String
+  confidenceScore    Float
+  sourceCitations    Json
+  guardrailNotes     Json
+  packetJson         Json
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cluster            TopicCluster   @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  assets             GeneratedAsset[]
+
+  @@index([userId, createdAt])
+  @@index([clusterId])
+}
+
+model GeneratedAsset {
+  id            String       @id @default(cuid())
+  packetId      String
+  type          AssetType
+  platform      String
+  title         String?
+  content       String
+  metadata      Json?
+  createdAt     DateTime     @default(now())
+  packet        ContentPacket @relation(fields: [packetId], references: [id], onDelete: Cascade)
+
+  @@index([packetId, type])
+}
+
+model KeywordWatch {
+  id          String   @id @default(cuid())
+  userId      String
+  keyword     String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@unique([userId, keyword])
+}
+
+model DigestRun {
+  id             String    @id @default(cuid())
+  userId         String
+  sentTo         String
+  status         JobStatus @default(PENDING)
+  summary        String?
+  packetIds      String[]
+  generatedAt    DateTime  @default(now())
+  sentAt         DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt])
+}
+
+model SavedIdea {
+  id          String       @id @default(cuid())
+  userId      String
+  clusterId   String
+  note        String?
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cluster     TopicCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clusterId])
+}
+
+model JobRun {
+  id            String    @id @default(cuid())
+  userId        String?
+  jobType       String
+  status        JobStatus @default(PENDING)
+  queueName     String
+  payload       Json?
+  result        Json?
+  errorMessage  String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([jobType, createdAt])
+  @@index([status, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String
+  payload     Json?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+}
