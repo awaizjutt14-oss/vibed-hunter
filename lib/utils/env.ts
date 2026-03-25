@@ -1,20 +1,26 @@
 import { z } from "zod";
 
+const optionalString = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+}, z.string().optional());
+
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1),
+  DATABASE_URL: optionalString,
+  REDIS_URL: optionalString,
   NEXTAUTH_URL: z.string().url().optional(),
   NEXTAUTH_SECRET: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: optionalString,
   OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
-  CRON_SECRET: z.string().optional(),
+  CRON_SECRET: optionalString,
   DEMO_ADMIN_EMAIL: z.string().email().default("admin@contenthunter.local"),
   DEMO_ADMIN_PASSWORD: z.string().default("demo-password"),
-  SEED_DEMO_MODE: z.string().optional(),
-  IG_APP_ID: z.string().optional(),
-  IG_APP_SECRET: z.string().optional(),
-  IG_REDIRECT_URI: z.string().optional()
+  SEED_DEMO_MODE: optionalString,
+  IG_APP_ID: optionalString,
+  IG_APP_SECRET: optionalString,
+  IG_REDIRECT_URI: optionalString
 });
 
 export const env = envSchema.parse({
