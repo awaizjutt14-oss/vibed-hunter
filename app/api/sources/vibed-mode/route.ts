@@ -24,3 +24,4 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: true, settings });
 }
+export const runtime = "nodejs";

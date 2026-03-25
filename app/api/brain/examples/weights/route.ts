@@ -17,3 +17,4 @@ export async function GET() {
   };
   return NextResponse.json({ weights });
 }
+export const runtime = "nodejs";

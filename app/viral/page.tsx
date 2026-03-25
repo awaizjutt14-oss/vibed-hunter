@@ -9,7 +9,6 @@ import { CopyButton } from "@/components/vibed/copy-button";
 type Result = {
   hook: string;
   caption: string;
-  cta?: string;
   pinned_comment: string;
   hashtags: string[];
   note?: string;
@@ -54,7 +53,7 @@ export default function ViralPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-primary">Viral Caption Bot</p>
             <h1 className="text-3xl font-semibold">Create a Vibed-ready post in one tap.</h1>
-            <p className="text-sm text-muted-foreground">Hook, caption, CTA, pinned comment, and hashtags—auto-formatted for {platform}.</p>
+            <p className="text-sm text-muted-foreground">Hook, caption, pinned comment, and hashtags—auto-formatted for {platform}.</p>
           </div>
           <Button onClick={generate} disabled={loading}>
             {loading ? "Generating..." : "Generate"}
@@ -115,7 +114,6 @@ export default function ViralPage() {
           {result.note ? <p className="text-xs text-muted-foreground">{result.note}</p> : null}
           <Section title="Hook" text={result.hook} />
           <Section title="Caption" text={result.caption} />
-          <Section title="CTA" text={result.cta ?? "Follow @vibed.media for more content like this"} />
           <Section title="Pinned comment" text={result.pinned_comment} />
           <Section title="Hashtags" text={result.hashtags.join(" ")} />
         </Card>
@@ -141,7 +139,6 @@ function formatAll(r: Result) {
     `Hook: ${r.hook}`,
     "Caption:",
     r.caption,
-    `CTA: ${r.cta ?? "Follow @vibed.media for more content like this"}`,
     `Pinned comment: ${r.pinned_comment}`,
     `Hashtags: ${r.hashtags.join(" ")}`
   ].join("\n");

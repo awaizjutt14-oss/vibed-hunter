@@ -11,3 +11,4 @@ export async function POST(request: NextRequest) {
   await prisma.savedIdea.create({ data: { userId, clusterId } });
   return NextResponse.json({ ok: true, saved: true });
 }
+export const runtime = "nodejs";

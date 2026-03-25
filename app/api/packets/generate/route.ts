@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePacketForCluster, generatePacketsForTopClusters } from "@/lib/ai/generate-packet";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   if (body.clusterId && body.userId) {

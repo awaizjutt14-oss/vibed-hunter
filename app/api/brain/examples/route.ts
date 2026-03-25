@@ -13,3 +13,4 @@ export async function POST(request: Request) {
   await addBrainExample({ type, text, quality, notes });
   return NextResponse.json({ ok: true });
 }
+export const runtime = "nodejs";

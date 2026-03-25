@@ -9,3 +9,4 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   });
   return NextResponse.json({ ok: true, packet });
 }
+export const runtime = "nodejs";

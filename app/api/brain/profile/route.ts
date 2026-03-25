@@ -19,3 +19,4 @@ export async function PUT(request: Request) {
   const profile = await importBrainProfile(body.profile);
   return NextResponse.json({ profile });
 }
+export const runtime = "nodejs";

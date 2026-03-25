@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAllFeedback, setFeedback, FeedbackRating, FeedbackReason } from "@/lib/brain-feedback-store";
 import { loadBrainProfile } from "@/lib/brain-profile-store";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   const feedback = await getAllFeedback();
   return NextResponse.json({ feedback });

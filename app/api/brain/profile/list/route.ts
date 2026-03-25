@@ -14,3 +14,4 @@ export async function POST(request: Request) {
   const profile = await activateBrainProfile(id);
   return NextResponse.json({ active: profile });
 }
+export const runtime = "nodejs";

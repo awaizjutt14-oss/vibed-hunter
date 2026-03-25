@@ -7,15 +7,21 @@ import { CopyButton } from "@/components/vibed/copy-button";
 
 type Rec = {
   slot: string;
+  timeslot: string;
+  category: string;
+  hook: string;
+  what_to_show: string;
+  why_it_works: string;
+  caption: string;
+  pinned_comment: string;
+  hashtags: string[];
   videoType: string;
   bestTopic: string;
   angle: string;
   hookDirection: string;
   backupTopics: string[];
   avoid: string;
-  hook: string;
   videoHint: string;
-  category: string;
   hookStyle: string;
 };
 
@@ -24,7 +30,6 @@ type CaptionPack = {
   caption: string;
   pinned_comment: string;
   hashtags: string[];
-  cta?: string;
 };
 
 export default function BotPage() {
@@ -36,12 +41,29 @@ export default function BotPage() {
   const [active, setActive] = useState<Rec | null>(null);
   const [pack, setPack] = useState<CaptionPack | null>(null);
   const [packLoading, setPackLoading] = useState(false);
+  const [niche, setNiche] = useState("");
+  const [platform, setPlatform] = useState("Instagram");
+  const [tone, setTone] = useState("viral");
+  const [audience, setAudience] = useState("general audience");
+
+  const nicheChips = ["AI", "fitness", "cars", "business", "fashion", "tech", "finance", "travel"];
 
   async function getPicks() {
+    if (!niche.trim()) {
+      setError("Enter your niche to get better ideas");
+      setRecs([]);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/dynamic-picks", { cache: "no-store" });
+      const params = new URLSearchParams({
+        niche,
+        platform,
+        tone,
+        audience
+      });
+      const res = await fetch(`/api/dynamic-picks?${params.toString()}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch topics");
       const json = await res.json();
       setRecs(json.recs ?? []);
@@ -57,34 +79,101 @@ export default function BotPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 px-4 py-8 md:py-12">
       <Card className="p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-5">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-primary">Vibed Bot</p>
-            <h1 className="text-2xl font-semibold">What should I post today?</h1>
-            <p className="text-sm text-muted-foreground">Three fast picks for 12:30 PM, 6:30 PM, and 9:15 PM.</p>
+            <h1 className="text-2xl font-semibold">What should I post in my niche today?</h1>
+            <p className="text-sm text-muted-foreground">Get 3 niche-specific ideas for your audience</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium">What&apos;s your niche?</label>
+              <input
+                value={niche}
+                onChange={(e) => setNiche(e.target.value)}
+                placeholder="e.g. fitness, AI tools, luxury cars, fashion, cooking, gaming"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-background px-4 text-sm text-foreground outline-none ring-0 transition focus:border-primary"
+              />
+              <div className="flex flex-wrap gap-2">
+                {nicheChips.map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setNiche(chip)}
+                    className="rounded-full border border-white/10 bg-card px-3 py-1.5 text-sm text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Platform</label>
+              <select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-white/10 bg-background px-4 text-sm text-foreground"
+              >
+                <option>Instagram</option>
+                <option>TikTok</option>
+                <option>YouTube Shorts</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tone</label>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-white/10 bg-background px-4 text-sm text-foreground"
+              >
+                <option>viral</option>
+                <option>educational</option>
+                <option>storytelling</option>
+                <option>authority</option>
+                <option>funny</option>
+                <option>luxury</option>
+              </select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium">Audience</label>
+              <select
+                value={audience}
+                onChange={(e) => setAudience(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-white/10 bg-background px-4 text-sm text-foreground"
+              >
+                <option>general audience</option>
+                <option>beginners</option>
+                <option>creators</option>
+                <option>entrepreneurs</option>
+                <option>students</option>
+              </select>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={getPicks} disabled={loading}>
-              {loading ? "Thinking..." : "Get today’s picks"}
-            </Button>
-            <Button variant="secondary" onClick={getPicks} disabled={loading}>
-              {loading ? "Refreshing..." : "Refresh Topics"}
+              {loading ? "Thinking..." : "Get ideas for my niche"}
             </Button>
           </div>
         </div>
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </Card>
 
+      {!niche.trim() ? (
+        <Card className="p-6 text-center">
+          <p className="text-base font-medium">Enter your niche to get better ideas</p>
+        </Card>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-3">
         {recs.map((rec) => (
           <Card key={rec.slot + rec.hook} className="h-full border-border/70 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.16em] text-primary">{rec.slot}</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">{rec.timeslot}</p>
               <Button size="sm" variant="ghost" onClick={() => sendFeedback(rec, "save")}>Save</Button>
             </div>
             <h2 className="text-lg font-semibold leading-tight">{rec.hook}</h2>
-            <p className="text-sm text-muted-foreground">{rec.angle}</p>
-            <p className="text-xs text-muted-foreground">{rec.videoHint}</p>
+            <p className="text-sm text-muted-foreground">{rec.why_it_works}</p>
+            <p className="text-xs text-muted-foreground">{rec.what_to_show}</p>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1" onClick={() => openDetail(rec)}>
                 Use this
@@ -126,20 +215,20 @@ export default function BotPage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 py-6 md:items-center" onClick={() => closeDetail()}>
           <div className="w-full max-w-xl rounded-2xl border border-border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.14em] text-primary">{active.slot}</p>
+              <p className="text-xs uppercase tracking-[0.14em] text-primary">{active.timeslot}</p>
               <Button size="sm" variant="ghost" onClick={() => closeDetail()}>Close</Button>
             </div>
             <h3 className="mt-2 text-xl font-semibold leading-tight">{active.hook}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{active.angle}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{active.why_it_works}</p>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               {packLoading ? <p>Loading pack...</p> : pack ? (
                 <>
+                  <Block title="Category" text={active.category} />
+                  <Block title="What to show" text={active.what_to_show} />
                   <Block title="Caption" text={pack.caption} />
                   <Block title="Pinned comment" text={pack.pinned_comment} />
-                  <Block title="CTA" text={pack.cta ?? "Follow @vibed.media for more content like this"} />
                   <Block title="Hashtags" text={pack.hashtags.join(" ")} />
                   <Block title="Safety note" text={active.avoid} />
-                  <Block title="What video to look for" text={active.videoHint} />
                 </>
               ) : (
                 <p>Tap “Use this” to load pack.</p>
@@ -162,21 +251,14 @@ export default function BotPage() {
   async function openDetail(rec: Rec) {
     await sendFeedback(rec, "use");
     setActive(rec);
-    setPack(null);
     setPackLoading(true);
-    try {
-      const res = await fetch("/api/captions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: rec.bestTopic, platform: "instagram", contentType: rec.videoType })
-      });
-      const json = await res.json();
-      setPack({ hook: json.hook ?? rec.hook, caption: json.caption ?? "", pinned_comment: json.pinned_comment ?? "", hashtags: json.hashtags ?? [], cta: json.cta });
-    } catch (err) {
-      setPack({ hook: rec.hook, caption: "", pinned_comment: "", hashtags: ["#vibed"], cta: "Follow @vibed.media for more content like this" });
-    } finally {
-      setPackLoading(false);
-    }
+    setPack({
+      hook: rec.hook,
+      caption: rec.caption,
+      pinned_comment: rec.pinned_comment,
+      hashtags: rec.hashtags
+    });
+    setPackLoading(false);
   }
 
   function closeDetail() {

@@ -4,12 +4,23 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CopyButton({ label, value, variant = "secondary" }: { label: string; value: string; variant?: "default" | "secondary" | "ghost" }) {
+export function CopyButton({
+  label,
+  value,
+  variant = "secondary",
+  onCopy
+}: {
+  label: string;
+  value: string;
+  variant?: "default" | "secondary" | "ghost";
+  onCopy?: () => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(value);
+      onCopy?.();
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch (_) {

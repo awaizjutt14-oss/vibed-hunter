@@ -12,3 +12,4 @@ export async function POST() {
     clusters
   });
 }
+export const runtime = "nodejs";

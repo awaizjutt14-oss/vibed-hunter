@@ -19,3 +19,4 @@ export async function POST(req: Request) {
   const updated = await recordPatternDecision(body.pattern, body.decision);
   return NextResponse.json({ pendingPatterns: updated });
 }
+export const runtime = "nodejs";

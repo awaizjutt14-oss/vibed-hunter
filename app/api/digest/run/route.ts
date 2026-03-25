@@ -16,3 +16,4 @@ export async function POST() {
   });
   return NextResponse.json({ ok: true, digest });
 }
+export const runtime = "nodejs";
