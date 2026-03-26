@@ -6,6 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/vibed/copy-button";
+import {
+  buildLearningPrompt,
+  loadLearningProfile,
+  recordLearningFeedback,
+  recordLearningInteraction
+} from "@/lib/remix-learning";
 
 type RemixResult = {
   hook?: string;
@@ -20,6 +26,13 @@ type RemixResult = {
   timeReason?: string;
   suggestedAudio?: string;
   contentType?: string;
+  internalScores?: {
+    hookStrength: number;
+    curiosity: number;
+    clarity: number;
+    virality: number;
+    nicheMatch: number;
+  };
   error?: string;
 };
 
@@ -36,6 +49,18 @@ const sectionKeys = ["hook", "caption", "pinnedComment", "cta", "hashtags", "sto
 
 type SectionKey = (typeof sectionKeys)[number];
 type SectionLoading = Partial<Record<SectionKey, boolean>>;
+
+function toLearningSnapshot(result?: RemixResult) {
+  if (!result) return undefined;
+  return {
+    hook: result.hook,
+    caption: result.caption,
+    cta: result.cta,
+    hashtags: Array.isArray(result.hashtags) ? result.hashtags.join(" ") : result.hashtags,
+    contentType: result.contentType,
+    internalScores: result.internalScores
+  };
+}
 
 export function RemixHome() {
   const searchParams = useSearchParams();
@@ -115,7 +140,8 @@ export function RemixHome() {
         tone: overrides?.tone ?? tone,
         outputFormat: overrides?.outputFormat ?? outputFormat,
         extraInstructions: overrides?.extraInstructions ?? extraInstructions,
-        vibedMode: overrides?.vibedMode ?? vibedMode
+        vibedMode: overrides?.vibedMode ?? vibedMode,
+        learningProfile: buildLearningPrompt(loadLearningProfile())
       })
     });
 
@@ -168,6 +194,14 @@ export function RemixHome() {
           .filter((value, index, array) => array.indexOf(value) === index)
           .slice(0, 3)
       );
+      recordLearningInteraction({
+        type: "generated",
+        platform,
+        tone,
+        outputFormat: "Hook",
+        content,
+        result: toLearningSnapshot(variants[0])
+      });
     } catch (err: any) {
       setError(err?.message ?? "Failed to generate hooks.");
     } finally {
@@ -209,6 +243,14 @@ export function RemixHome() {
             }
           : current
       );
+      recordLearningInteraction({
+        type: "regenerated",
+        platform,
+        tone,
+        outputFormat,
+        content,
+        result: toLearningSnapshot(refreshed)
+      });
     } catch (err: any) {
       setError(err?.message ?? "Failed to regenerate section.");
     } finally {
@@ -234,6 +276,14 @@ export function RemixHome() {
           ? [payload.hook, ...current].filter((value, index, array) => array.indexOf(value) === index).slice(0, 3)
           : current
       );
+      recordLearningInteraction({
+        type: "generated",
+        platform,
+        tone,
+        outputFormat,
+        content,
+        result: toLearningSnapshot(payload)
+      });
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong.");
     } finally {
@@ -371,10 +421,20 @@ export function RemixHome() {
                   key={hook}
                   type="button"
                   onClick={() =>
-                    setResult((current) => ({
-                      ...(current ?? {}),
-                      hook
-                    }))
+                    {
+                      setResult((current) => ({
+                        ...(current ?? {}),
+                        hook
+                      }));
+                      recordLearningInteraction({
+                        type: "selected_hook",
+                        platform,
+                        tone,
+                        outputFormat,
+                        content,
+                        result: { hook }
+                      });
+                    }
                   }
                   className={`rounded-[1.25rem] border p-4 text-left text-sm transition-all ${
                     (result?.hook ?? "") === hook
@@ -397,11 +457,38 @@ export function RemixHome() {
               <p className="text-sm font-semibold tracking-tight text-foreground">Transformed Result</p>
               <CopyButton label="Copy all" value={buildFullResult(result)} variant="ghost" />
             </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => recordLearningFeedback("liked")}>
+                User liked this
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("performed_well")}>
+                Performed well
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("high_engagement")}>
+                High engagement
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("low_engagement")}>
+                Low engagement
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("performed_badly")}>
+                Performed badly
+              </Button>
+            </div>
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <Section
                 title="Hook"
                 content={result.hook ?? ""}
                 copyLabel="Copy hook"
+                onCopy={() =>
+                  recordLearningInteraction({
+                    type: "copied_hook",
+                    platform,
+                    tone,
+                    outputFormat,
+                    content,
+                    result: toLearningSnapshot(result)
+                  })
+                }
                 actionLabel={sectionLoading.hook ? "Regenerating..." : "Regenerate"}
                 onAction={() => regenerateSection("hook")}
                 actionDisabled={Boolean(sectionLoading.hook)}
@@ -411,6 +498,16 @@ export function RemixHome() {
                 title="CTA"
                 content={result.cta ?? ""}
                 copyLabel="Copy CTA"
+                onCopy={() =>
+                  recordLearningInteraction({
+                    type: "copied_cta",
+                    platform,
+                    tone,
+                    outputFormat,
+                    content,
+                    result: toLearningSnapshot(result)
+                  })
+                }
                 actionLabel={sectionLoading.cta ? "Regenerating..." : "Regenerate"}
                 onAction={() => regenerateSection("cta")}
                 actionDisabled={Boolean(sectionLoading.cta)}
@@ -419,6 +516,16 @@ export function RemixHome() {
                 title="Caption"
                 content={result.caption ?? ""}
                 copyLabel="Copy caption"
+                onCopy={() =>
+                  recordLearningInteraction({
+                    type: "copied_caption",
+                    platform,
+                    tone,
+                    outputFormat,
+                    content,
+                    result: toLearningSnapshot(result)
+                  })
+                }
                 className="lg:col-span-2"
                 actionLabel={sectionLoading.caption ? "Regenerating..." : "Regenerate"}
                 onAction={() => regenerateSection("caption")}
@@ -436,6 +543,16 @@ export function RemixHome() {
                 title="Hashtags"
                 content={Array.isArray(result.hashtags) ? result.hashtags.join(" ") : result.hashtags ?? ""}
                 copyLabel="Copy hashtags"
+                onCopy={() =>
+                  recordLearningInteraction({
+                    type: "copied_hashtags",
+                    platform,
+                    tone,
+                    outputFormat,
+                    content,
+                    result: toLearningSnapshot(result)
+                  })
+                }
                 actionLabel={sectionLoading.hashtags ? "Regenerating..." : "Regenerate"}
                 onAction={() => regenerateSection("hashtags")}
                 actionDisabled={Boolean(sectionLoading.hashtags)}
@@ -463,6 +580,24 @@ export function RemixHome() {
                 copyLabel="Copy audio"
                 className="lg:col-span-2"
               />
+              <div className="lg:col-span-2">
+                <Button
+                  variant="secondary"
+                  className="rounded-2xl"
+                  onClick={() =>
+                    recordLearningInteraction({
+                      type: "saved_result",
+                      platform,
+                      tone,
+                      outputFormat,
+                      content,
+                      result: toLearningSnapshot(result)
+                    })
+                  }
+                >
+                  Save result
+                </Button>
+              </div>
             </div>
           </Card>
         </section>
@@ -523,6 +658,7 @@ function Section({
   title,
   content,
   copyLabel,
+  onCopy,
   className,
   actionLabel,
   onAction,
@@ -532,6 +668,7 @@ function Section({
   title: string;
   content: string;
   copyLabel?: string;
+  onCopy?: () => void;
   className?: string;
   actionLabel?: string;
   onAction?: () => void;
@@ -548,7 +685,7 @@ function Section({
               {actionLabel ?? "Regenerate"}
             </Button>
           ) : null}
-          {copyLabel ? <CopyButton label={copyLabel} value={content} variant="ghost" /> : null}
+          {copyLabel ? <CopyButton label={copyLabel} value={content} variant="ghost" onCopy={onCopy} /> : null}
         </div>
       </div>
       <p

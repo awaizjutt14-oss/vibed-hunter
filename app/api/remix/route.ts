@@ -18,6 +18,13 @@ type RemixSectionResult = {
   timeReason: string;
   suggestedAudio: string;
   contentType: string;
+  internalScores: {
+    hookStrength: number;
+    curiosity: number;
+    clarity: number;
+    virality: number;
+    nicheMatch: number;
+  };
 };
 
 function isPlaceholderKey(apiKey: string | undefined) {
@@ -60,10 +67,22 @@ function asApiResponse(result: RemixSectionResult) {
     timeReason: result.timeReason,
     suggestedAudio: result.suggestedAudio,
     contentType: result.contentType,
+    internalScores: result.internalScores,
     // Legacy aliases to avoid breaking the current page while it migrates.
     pinned_comment: result.pinnedComment,
     story_text: result.story
   };
+}
+
+function scorePackage(input: string, result: Partial<RemixSectionResult>) {
+  const text = `${input} ${result.hook ?? ""} ${result.caption ?? ""}`.toLowerCase();
+  const hookStrength = Math.min(100, 55 + (result.hook?.length ?? 0));
+  const curiosity = /(how|why|what|fake|illegal|supposed|secret|instantly|hours|seconds)/.test(text) ? 88 : 72;
+  const clarity = (result.caption?.split(/\s+/).length ?? 0) <= 120 ? 90 : 70;
+  const virality = Math.round((hookStrength + curiosity + clarity) / 3);
+  const nicheMatch = /(tech|fitness|luxury|satisfying|business|fashion|science|engineering|story)/.test(text) ? 86 : 74;
+
+  return { hookStrength, curiosity, clarity, virality, nicheMatch };
 }
 
 function inferPackaging(input: string) {
@@ -122,7 +141,8 @@ function buildFallback({
       : `Follow for more ${tone} content like this`,
     hashtags: normalizeHashtags([tone, platform, "content", "creator"]).join(" "),
     story: `Hook fast.\nShow the strongest visual first.\nLand the payoff before people swipe.`,
-    ...inferPackaging(input)
+    ...inferPackaging(input),
+    internalScores: scorePackage(input, { hook: hookBase, caption: source })
   };
 }
 
@@ -149,6 +169,7 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
     timeReason: string;
     suggestedAudio: string;
     contentType: string;
+    internalScores: RemixSectionResult["internalScores"];
   }> | null = null;
 
   const text = outputText || "";
@@ -163,7 +184,8 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
       cta: "",
       hashtags: "",
       story: "",
-      ...inferPackaging(text)
+      ...inferPackaging(text),
+      internalScores: scorePackage(text, { caption: text })
     };
   }
 
@@ -198,7 +220,14 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
           ? parsed.suggestedAudio.trim()
           : inferPackaging(text).suggestedAudio,
       contentType:
-        typeof parsed.contentType === "string" ? parsed.contentType.trim() : inferPackaging(text).contentType
+        typeof parsed.contentType === "string" ? parsed.contentType.trim() : inferPackaging(text).contentType,
+      internalScores:
+        parsed.internalScores && typeof parsed.internalScores === "object"
+          ? (parsed.internalScores as RemixSectionResult["internalScores"])
+          : scorePackage(text, {
+              hook: typeof parsed.hook === "string" ? parsed.hook : "",
+              caption: typeof parsed.caption === "string" ? parsed.caption : ""
+            })
     };
   }
 
@@ -209,7 +238,8 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
     cta: "",
     hashtags: "",
     story: "",
-    ...inferPackaging(text)
+    ...inferPackaging(text),
+    internalScores: scorePackage(text, { caption: text })
   };
 }
 
@@ -225,6 +255,13 @@ function emptyResponse(caption = "Something went wrong. Try again.") {
     timeReason: "",
     suggestedAudio: "",
     contentType: "",
+    internalScores: {
+      hookStrength: 0,
+      curiosity: 0,
+      clarity: 0,
+      virality: 0,
+      nicheMatch: 0
+    },
     pinned_comment: "",
     story_text: ""
   };
@@ -244,7 +281,8 @@ function safeJsonFromText(text: string) {
       cta: "",
       hashtags: "",
       story: "",
-      ...inferPackaging(text)
+      ...inferPackaging(text),
+      internalScores: scorePackage(text, { caption: text })
     };
   }
 
@@ -260,7 +298,8 @@ export async function POST(req: Request) {
       tone,
       outputFormat,
       extraInstructions,
-      vibedMode
+      vibedMode,
+      learningProfile
     } = (await req.json()) as {
       input?: string;
       action?: string;
@@ -269,6 +308,7 @@ export async function POST(req: Request) {
       outputFormat?: string;
       extraInstructions?: string;
       vibedMode?: boolean;
+      learningProfile?: string;
     };
 
     const trimmedInput = input?.trim();
@@ -441,6 +481,9 @@ Additional package rules:
   - Human Skill
   - Breaking
   - Informative
+
+Learned user preference summary:
+${learningProfile?.trim() || "No learned preferences yet."}
 
 Context:
 - Action: ${action ?? "Rewrite"}

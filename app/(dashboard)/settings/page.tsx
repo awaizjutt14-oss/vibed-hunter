@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { getBrandRules } from "@/lib/vibed-hunter-data";
+import { LearningSettings } from "@/components/vibed/learning-settings";
 
 export default function SettingsPage() {
   const rules = getBrandRules();
@@ -54,6 +55,7 @@ export default function SettingsPage() {
             <div>Planner reminders: enabled</div>
           </div>
         </Card>
+        <LearningSettings />
       </div>
     </div>
   );
