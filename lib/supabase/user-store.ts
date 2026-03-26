@@ -86,6 +86,10 @@ export async function saveUserToDatabase(user: Pick<User, "email">) {
     return { ok: false, reason: "missing_client" as const };
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("SUPABASE_SERVICE_ROLE_KEY is missing. Server sync is using the anon key and may be blocked by RLS.");
+  }
+
   console.info("Supabase save attempt.", { email });
 
   const tableReady = await ensureUsersTableAvailable();
@@ -102,7 +106,16 @@ export async function saveUserToDatabase(user: Pick<User, "email">) {
   });
   if (insertError) {
     console.error("Supabase insert error:", insertError);
-    return { ok: false, reason: "insert_failed" as const, error: insertError };
+    return {
+      ok: false,
+      reason: "insert_failed" as const,
+      error: {
+        message: insertError.message,
+        code: "code" in insertError ? insertError.code : undefined,
+        details: "details" in insertError ? insertError.details : undefined,
+        hint: "hint" in insertError ? insertError.hint : undefined
+      }
+    };
   }
 
   console.info("Supabase save success.", { email });
@@ -152,7 +165,16 @@ export async function saveGenerationToDatabase(args: {
 
   if (error) {
     console.error("Failed to save generation history.", error);
-    return { ok: false, reason: "insert_failed" as const, error };
+    return {
+      ok: false,
+      reason: "insert_failed" as const,
+      error: {
+        message: error.message,
+        code: "code" in error ? error.code : undefined,
+        details: "details" in error ? error.details : undefined,
+        hint: "hint" in error ? error.hint : undefined
+      }
+    };
   }
 
   console.info("Saved generation history.", { userEmail });

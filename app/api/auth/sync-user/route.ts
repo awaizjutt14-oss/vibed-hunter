@@ -25,8 +25,19 @@ export async function POST(request: Request) {
   const result = await saveUserToDatabase({ email });
 
   if (!result.ok) {
-    console.error("Sync user save error.", { email, reason: result.reason });
-    return NextResponse.json({ ok: false, error: result.reason }, { status: 500 });
+    console.error("Sync user save error.", {
+      email,
+      reason: result.reason,
+      details: "error" in result ? result.error : undefined
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: result.reason,
+        details: "error" in result ? result.error : undefined
+      },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true });

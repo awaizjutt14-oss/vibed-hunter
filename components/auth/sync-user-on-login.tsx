@@ -30,10 +30,19 @@ export function SyncUserOnLogin() {
           body: JSON.stringify({ email: normalizedEmail })
         });
 
-        const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        const payload = (await response.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+          details?: {
+            message?: string;
+            code?: string;
+            details?: string;
+            hint?: string;
+          };
+        };
 
         if (!response.ok || !payload.ok) {
-          console.error("sync-user API error", payload.error || "Unknown sync error");
+          console.error("sync-user API error", payload.error || "Unknown sync error", payload.details || "");
           return;
         }
 
