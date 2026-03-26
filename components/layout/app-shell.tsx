@@ -22,7 +22,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         <div className="absolute bottom-[-14%] left-[16%] h-[30rem] w-[30rem] rounded-full bg-blue-500/8 blur-[140px]" />
       </div>
       <div className="relative mx-auto w-full max-w-[90rem] px-4 py-4 sm:px-6 sm:py-6">
-        <header className="vibed-glass vibed-glow-ring sticky top-4 z-20 mb-10 rounded-[2rem] px-5 py-4 sm:px-6">
+        <header className="vibed-glass vibed-glow-ring sticky top-4 z-20 mb-12 rounded-[2rem] px-5 py-4 sm:px-6">
+          <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/35 to-transparent" />
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <Link href="/" className="group flex items-center gap-4">
               <div className="relative flex h-14 w-14 items-center justify-center rounded-[1.4rem] border border-emerald-300/15 bg-[linear-gradient(180deg,rgba(73,255,182,0.14),rgba(73,255,182,0.04))] text-primary shadow-[0_18px_40px_rgba(73,255,182,0.14)] transition-transform duration-300 group-hover:-translate-y-0.5">
@@ -40,7 +41,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </Link>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <nav className="flex flex-wrap items-center gap-2 rounded-full border border-white/8 bg-white/[0.02] p-1.5">
+              <nav className="flex flex-wrap items-center gap-2 rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -58,7 +59,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 })}
               </nav>
               {session?.user?.email ? (
-                <div className="flex items-center gap-3 rounded-full border border-white/8 bg-white/[0.02] px-2 py-2 sm:pl-4">
+                <div className="flex items-center gap-3 rounded-full border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] px-2 py-2 sm:pl-4">
                   <div className="hidden items-center gap-3 sm:flex">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-xs font-semibold uppercase text-foreground/80">
                       {(session.user.name || session.user.email || "V").slice(0, 1)}

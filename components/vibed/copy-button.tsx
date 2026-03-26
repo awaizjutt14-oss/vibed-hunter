@@ -29,7 +29,7 @@ export function CopyButton({
   }
 
   return (
-    <Button size="sm" variant={variant} onClick={handleCopy} className="gap-2">
+    <Button size="sm" variant={variant} onClick={handleCopy} className="gap-2 rounded-xl">
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
       {copied ? "Copied" : label}
     </Button>

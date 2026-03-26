@@ -11,9 +11,9 @@ const buttonVariants = cva(
         default:
           "border border-emerald-300/15 bg-[linear-gradient(180deg,rgba(73,255,182,0.96),rgba(36,212,138,0.88))] text-black shadow-[0_18px_42px_rgba(73,255,182,0.22)] hover:-translate-y-0.5 hover:shadow-[0_22px_54px_rgba(73,255,182,0.28)]",
         secondary:
-          "border border-white/10 bg-white/[0.045] text-secondary-foreground shadow-[0_14px_34px_rgba(0,0,0,0.22)] hover:border-white/18 hover:bg-white/[0.075] hover:-translate-y-0.5",
+          "border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] text-secondary-foreground shadow-[0_14px_34px_rgba(0,0,0,0.22)] hover:border-white/18 hover:bg-white/[0.08] hover:-translate-y-0.5",
         ghost:
-          "border border-transparent bg-transparent text-foreground hover:border-white/10 hover:bg-white/[0.05]",
+          "border border-white/0 bg-transparent text-foreground/88 hover:border-white/10 hover:bg-white/[0.05] hover:text-white",
         danger: "border border-red-400/15 bg-danger text-danger-foreground hover:opacity-90"
       },
       size: {

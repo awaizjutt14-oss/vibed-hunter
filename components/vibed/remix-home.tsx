@@ -395,7 +395,7 @@ export function RemixHome() {
     <main className="flex flex-col gap-8">
       <section className="vibed-glass vibed-glow-ring relative overflow-hidden rounded-[2.25rem] px-6 py-8 shadow-[0_36px_140px_rgba(0,0,0,0.42)] sm:px-8 sm:py-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,255,182,0.16),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(124,242,255,0.12),transparent_24%),linear-gradient(120deg,rgba(255,255,255,0.02),transparent_50%)]" />
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl space-y-5">
             <span className="vibed-badge text-emerald-200/75">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(73,255,182,0.9)]" />
@@ -412,12 +412,23 @@ export function RemixHome() {
             </div>
             <TrialStatusPanel status={trialStatus} exhausted={isTrialExhausted} compact={false} />
           </div>
-          <div className="flex w-full max-w-sm flex-col gap-4 rounded-[1.8rem] border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
+          <div className="vibed-panel flex w-full max-w-sm flex-col gap-5 rounded-[1.8rem] p-4">
             <div className="space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Launch Sequence</p>
               <p className="text-sm leading-6 text-slate-300">
                 Shape the concept, generate the package, and refine the strongest angle without leaving the screen.
               </p>
+            </div>
+            <div className="vibed-divider" />
+            <div className="grid gap-3 text-sm text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Flow</span>
+                <span>Idea → Hook → Caption</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Mode</span>
+                <span>{vibedMode ? "Premium Vibed" : "Standard"}</span>
+              </div>
             </div>
             <Button
               onClick={transform}
@@ -432,7 +443,7 @@ export function RemixHome() {
 
       <Card className="overflow-hidden rounded-[2rem] p-0">
         <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="border-b border-white/8 p-6 sm:p-7 lg:border-b-0 lg:border-r">
+          <div className="border-b border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.015),transparent)] p-6 sm:p-7 lg:border-b-0 lg:border-r">
             <div className="space-y-6">
               <div className="space-y-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
@@ -484,7 +495,7 @@ export function RemixHome() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-6 p-6 sm:p-7">
+          <div className="flex flex-col gap-6 bg-[linear-gradient(180deg,rgba(255,255,255,0.01),transparent)] p-6 sm:p-7">
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -516,7 +527,7 @@ export function RemixHome() {
 
             <TrialStatusPanel status={trialStatus} exhausted={isTrialExhausted} compact />
 
-            <details className="rounded-[1.5rem] border border-white/8 bg-white/[0.025] p-5">
+            <details className="vibed-panel rounded-[1.5rem] p-5">
               <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
                 Advanced options
               </summary>
@@ -562,7 +573,7 @@ export function RemixHome() {
         </div>
 
           {hookOptions.length ? (
-            <div className="border-t border-white/8 px-6 py-6 sm:px-7">
+            <div className="border-t border-white/8 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.02))] px-6 py-6 sm:px-7">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Hook Options</p>
@@ -846,7 +857,7 @@ function Section({
   highlight?: boolean;
 }) {
   return (
-    <div className={`vibed-glass rounded-[1.35rem] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/14 ${className ?? ""}`}>
+    <div className={`vibed-panel rounded-[1.35rem] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/14 ${className ?? ""}`}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/70">{title}</p>
         <div className="flex items-center gap-2">
@@ -925,12 +936,21 @@ function TrialStatusPanel({
           </div>
           <Link
             href="/settings"
-            className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:border-white/18 hover:bg-white/[0.08]"
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${
+              exhausted
+                ? "border border-amber-300/18 bg-amber-300/10 text-amber-100 hover:bg-amber-300/14"
+                : "border border-white/10 bg-white/[0.04] text-white hover:border-white/18 hover:bg-white/[0.08]"
+            }`}
           >
-            Upgrade
+            {exhausted ? "Unlock Pro" : "Upgrade"}
           </Link>
         </div>
       </div>
+      {!compact && exhausted ? (
+        <div className="mt-4 rounded-[1.15rem] border border-white/8 bg-black/20 px-4 py-3 text-sm text-slate-300">
+          Premium mode unlocks unlimited generations, advanced iteration, and a smoother creator workflow.
+        </div>
+      ) : null}
     </div>
   );
 }

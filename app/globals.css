@@ -66,6 +66,16 @@ a {
   backdrop-filter: blur(26px);
 }
 
+.vibed-panel {
+  background:
+    linear-gradient(180deg, rgba(11, 14, 21, 0.92), rgba(8, 11, 17, 0.88)),
+    radial-gradient(circle at top, rgba(73, 255, 182, 0.05), transparent 32%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 .vibed-glow-ring {
   position: relative;
 }
@@ -87,6 +97,11 @@ a {
   @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em];
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
+}
+
+.vibed-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
 }
 
 .card-raise {
