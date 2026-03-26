@@ -2,6 +2,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { NextAuthConfig } from "next-auth";
 import { prisma } from "@/lib/db/prisma";
+import { saveUserToDatabase } from "@/lib/supabase/user-store";
 import { env } from "@/lib/utils/env";
 
 const providers = [];
@@ -47,6 +48,10 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     async signIn({ user }) {
       if (user.email) {
+        console.info("Login success.", { email: user.email.toLowerCase() });
+      }
+
+      if (user.email) {
         await prisma.user.upsert({
           where: { email: user.email },
           update: {
@@ -73,6 +78,18 @@ export const authConfig: NextAuthConfig = {
         session.user.name = typeof token.name === "string" ? token.name : "";
       }
       return session;
+    }
+  },
+  events: {
+    async signIn({ user }) {
+      if (!user.email) {
+        console.error("Post-login sync skipped: missing user email.");
+        return;
+      }
+
+      await saveUserToDatabase({ email: user.email }).catch((error) => {
+        console.error("Supabase user save failed after login.", error);
+      });
     }
   }
 };
