@@ -7,10 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/vibed/copy-button";
 import {
+  applyLearningFeedback,
+  applyLearningInteraction,
   buildLearningPrompt,
-  loadLearningProfile,
-  recordLearningFeedback,
-  recordLearningInteraction
+  createEmptyLearningProfile,
+  fetchLearningProfile,
+  persistLearningFeedback,
+  persistLearningInteraction,
+  type InteractionType,
+  type LearningFeedback,
+  type LearningResultSnapshot,
+  type PreferenceProfile
 } from "@/lib/remix-learning";
 
 type RemixResult = {
@@ -76,6 +83,7 @@ export function RemixHome() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RemixResult | null>(null);
   const [hookOptions, setHookOptions] = useState<string[]>([]);
+  const [learningProfile, setLearningProfile] = useState<PreferenceProfile>(createEmptyLearningProfile());
 
   useEffect(() => {
     const prefill = searchParams.get("prefill");
@@ -84,6 +92,22 @@ export function RemixHome() {
       setOutputFormat("Full post");
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchLearningProfile()
+      .then((profile) => {
+        if (active) setLearningProfile(profile);
+      })
+      .catch(() => {
+        if (active) setLearningProfile(createEmptyLearningProfile());
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function updateSectionLoading(section: SectionKey, value: boolean) {
     setSectionLoading((current) => ({
@@ -121,6 +145,27 @@ export function RemixHome() {
     };
   }
 
+  function syncInteraction(args: {
+    type: InteractionType;
+    platform?: string;
+    tone?: string;
+    outputFormat?: string;
+    content?: string;
+    result?: LearningResultSnapshot;
+  }) {
+    setLearningProfile((current) => applyLearningInteraction(current, args));
+    void persistLearningInteraction(args)
+      .then((profile) => setLearningProfile(profile))
+      .catch(() => undefined);
+  }
+
+  function syncFeedback(feedback: LearningFeedback, snapshot?: ReturnType<typeof toLearningSnapshot>) {
+    setLearningProfile((current) => applyLearningFeedback(current, feedback, snapshot));
+    void persistLearningFeedback(feedback, snapshot)
+      .then((profile) => setLearningProfile(profile))
+      .catch(() => undefined);
+  }
+
   async function requestRemix(overrides?: Partial<{
     input: string;
     tone: string;
@@ -141,7 +186,7 @@ export function RemixHome() {
         outputFormat: overrides?.outputFormat ?? outputFormat,
         extraInstructions: overrides?.extraInstructions ?? extraInstructions,
         vibedMode: overrides?.vibedMode ?? vibedMode,
-        learningProfile: buildLearningPrompt(loadLearningProfile())
+        learningProfile: buildLearningPrompt(learningProfile)
       })
     });
 
@@ -194,7 +239,7 @@ export function RemixHome() {
           .filter((value, index, array) => array.indexOf(value) === index)
           .slice(0, 3)
       );
-      recordLearningInteraction({
+      syncInteraction({
         type: "generated",
         platform,
         tone,
@@ -243,7 +288,7 @@ export function RemixHome() {
             }
           : current
       );
-      recordLearningInteraction({
+      syncInteraction({
         type: "regenerated",
         platform,
         tone,
@@ -276,7 +321,7 @@ export function RemixHome() {
           ? [payload.hook, ...current].filter((value, index, array) => array.indexOf(value) === index).slice(0, 3)
           : current
       );
-      recordLearningInteraction({
+      syncInteraction({
         type: "generated",
         platform,
         tone,
@@ -426,7 +471,7 @@ export function RemixHome() {
                         ...(current ?? {}),
                         hook
                       }));
-                      recordLearningInteraction({
+                      syncInteraction({
                         type: "selected_hook",
                         platform,
                         tone,
@@ -458,19 +503,32 @@ export function RemixHome() {
               <CopyButton label="Copy all" value={buildFullResult(result)} variant="ghost" />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="secondary" onClick={() => recordLearningFeedback("liked")}>
-                User liked this
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => syncFeedback("strong", toLearningSnapshot(result))}
+              >
+                Strong
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("performed_well")}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => syncFeedback("weak", toLearningSnapshot(result))}
+              >
+                Weak
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => syncFeedback("performed_well", toLearningSnapshot(result))}
+              >
                 Performed well
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("high_engagement")}>
-                High engagement
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("low_engagement")}>
-                Low engagement
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => recordLearningFeedback("performed_badly")}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => syncFeedback("performed_badly", toLearningSnapshot(result))}
+              >
                 Performed badly
               </Button>
             </div>
@@ -480,7 +538,7 @@ export function RemixHome() {
                 content={result.hook ?? ""}
                 copyLabel="Copy hook"
                 onCopy={() =>
-                  recordLearningInteraction({
+                  syncInteraction({
                     type: "copied_hook",
                     platform,
                     tone,
@@ -499,7 +557,7 @@ export function RemixHome() {
                 content={result.cta ?? ""}
                 copyLabel="Copy CTA"
                 onCopy={() =>
-                  recordLearningInteraction({
+                  syncInteraction({
                     type: "copied_cta",
                     platform,
                     tone,
@@ -517,7 +575,7 @@ export function RemixHome() {
                 content={result.caption ?? ""}
                 copyLabel="Copy caption"
                 onCopy={() =>
-                  recordLearningInteraction({
+                  syncInteraction({
                     type: "copied_caption",
                     platform,
                     tone,
@@ -544,7 +602,7 @@ export function RemixHome() {
                 content={Array.isArray(result.hashtags) ? result.hashtags.join(" ") : result.hashtags ?? ""}
                 copyLabel="Copy hashtags"
                 onCopy={() =>
-                  recordLearningInteraction({
+                  syncInteraction({
                     type: "copied_hashtags",
                     platform,
                     tone,
@@ -585,7 +643,7 @@ export function RemixHome() {
                   variant="secondary"
                   className="rounded-2xl"
                   onClick={() =>
-                    recordLearningInteraction({
+                    syncInteraction({
                       type: "saved_result",
                       platform,
                       tone,

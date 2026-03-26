@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Bookmark, Settings, Sparkles } from "lucide-react";
+import { auth, signOut } from "@/auth";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
@@ -7,7 +9,9 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings }
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  const session = await auth().catch(() => null);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
@@ -22,23 +26,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Vibed Hunter</h1>
               </div>
             </Link>
-            <nav className="flex flex-wrap items-center gap-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href as any}
-                  className={cn(
-                    "flex items-center gap-2 rounded-2xl border border-transparent px-4 py-2.5 text-sm text-muted-foreground transition-all duration-200 hover:border-white/10 hover:bg-white/[0.04] hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-            </nav>
+            <div className="flex flex-wrap items-center gap-3">
+              <nav className="flex flex-wrap items-center gap-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href as any}
+                      className={cn(
+                        "flex items-center gap-2 rounded-2xl border border-transparent px-4 py-2.5 text-sm text-muted-foreground transition-all duration-200 hover:border-white/10 hover:bg-white/[0.04] hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+              {session?.user?.email ? (
+                <div className="flex items-center gap-3">
+                  <span className="hidden text-sm text-muted-foreground sm:inline">
+                    {session.user.name || session.user.email}
+                  </span>
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signOut({ redirectTo: "/" });
+                    }}
+                  >
+                    <Button type="submit" variant="secondary" className="rounded-2xl">
+                      Logout
+                    </Button>
+                  </form>
+                </div>
+              ) : (
+                <Button asChild variant="secondary" className="rounded-2xl">
+                  <Link href="/login">Login</Link>
+                </Button>
+              )}
+            </div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-5xl space-y-8 pb-10">{children}</main>

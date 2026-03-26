@@ -4,30 +4,46 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import {
+  createEmptyLearningProfile,
+  fetchLearningProfile,
   getLearningSummary,
-  loadLearningProfile,
-  resetLearningProfile,
-  setLearningEnabled
+  persistLearningReset,
+  persistLearningToggle
 } from "@/lib/remix-learning";
 
 export function LearningSettings() {
   const [enabled, setEnabled] = useState(true);
-  const [summary, setSummary] = useState(getLearningSummary());
+  const [summary, setSummary] = useState(getLearningSummary(createEmptyLearningProfile()));
 
   useEffect(() => {
-    const profile = loadLearningProfile();
-    setEnabled(profile.enabled);
-    setSummary(getLearningSummary(profile));
+    let active = true;
+
+    fetchLearningProfile()
+      .then((profile) => {
+        if (!active) return;
+        setEnabled(profile.enabled);
+        setSummary(getLearningSummary(profile));
+      })
+      .catch(() => {
+        if (!active) return;
+        const profile = createEmptyLearningProfile();
+        setEnabled(profile.enabled);
+        setSummary(getLearningSummary(profile));
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  function handleToggle() {
-    const profile = setLearningEnabled(!enabled);
+  async function handleToggle() {
+    const profile = await persistLearningToggle(!enabled);
     setEnabled(profile.enabled);
     setSummary(getLearningSummary(profile));
   }
 
-  function handleReset() {
-    const profile = resetLearningProfile();
+  async function handleReset() {
+    const profile = await persistLearningReset();
     setEnabled(profile.enabled);
     setSummary(getLearningSummary(profile));
   }
@@ -36,7 +52,7 @@ export function LearningSettings() {
     <Card>
       <CardTitle>Learning</CardTitle>
       <CardDescription className="mt-2">
-        Controlled local learning that adapts prompts from your behavior without changing core logic.
+        Controlled backend learning that adapts prompts from your behavior without changing core logic.
       </CardDescription>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button variant={enabled ? "default" : "secondary"} onClick={handleToggle}>

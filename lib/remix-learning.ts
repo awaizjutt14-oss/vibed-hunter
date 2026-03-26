@@ -1,13 +1,13 @@
-"use client";
-
 export type LearningFeedback =
+  | "strong"
+  | "weak"
   | "liked"
   | "performed_well"
   | "performed_badly"
   | "high_engagement"
   | "low_engagement";
 
-type InteractionType =
+export type InteractionType =
   | "selected_hook"
   | "copied_hook"
   | "copied_caption"
@@ -43,7 +43,7 @@ type BestExample = {
   score: number;
 };
 
-type PreferenceProfile = {
+export type PreferenceProfile = {
   enabled: boolean;
   weightedPreferences: {
     tones: WeightedMap;
@@ -60,9 +60,7 @@ type PreferenceProfile = {
   bestExamples: BestExample[];
 };
 
-const STORAGE_KEY = "vibed-hunter-learning";
-
-function emptyProfile(): PreferenceProfile {
+export function createEmptyLearningProfile(): PreferenceProfile {
   return {
     enabled: true,
     weightedPreferences: {
@@ -78,6 +76,22 @@ function emptyProfile(): PreferenceProfile {
     feedbackCounts: {},
     patternRanking: {},
     bestExamples: []
+  };
+}
+
+export function normalizeLearningProfile(profile?: Partial<PreferenceProfile> | null): PreferenceProfile {
+  const empty = createEmptyLearningProfile();
+  return {
+    ...empty,
+    ...profile,
+    weightedPreferences: {
+      ...empty.weightedPreferences,
+      ...(profile?.weightedPreferences ?? {})
+    },
+    interactionCounts: profile?.interactionCounts ?? {},
+    feedbackCounts: profile?.feedbackCounts ?? {},
+    patternRanking: profile?.patternRanking ?? {},
+    bestExamples: Array.isArray(profile?.bestExamples) ? profile!.bestExamples : []
   };
 }
 
@@ -150,10 +164,14 @@ function interactionWeight(type: InteractionType) {
 
 function feedbackWeight(type: LearningFeedback) {
   switch (type) {
+    case "strong":
+      return 2;
     case "high_engagement":
     case "performed_well":
     case "liked":
       return 3;
+    case "weak":
+      return -1.5;
     case "low_engagement":
     case "performed_badly":
       return -2;
@@ -166,11 +184,11 @@ function resultScore(result?: LearningResultSnapshot) {
   const scores = result?.internalScores;
   if (!scores) return 0;
   return Math.round(
-    (scores.hookStrength * 0.3 +
+    scores.hookStrength * 0.3 +
       scores.curiosity * 0.2 +
       scores.clarity * 0.15 +
       scores.virality * 0.25 +
-      scores.nicheMatch * 0.1)
+      scores.nicheMatch * 0.1
   );
 }
 
@@ -195,44 +213,18 @@ function updateBestExamples(profile: PreferenceProfile, result?: LearningResultS
     .slice(0, 5);
 }
 
-export function loadLearningProfile(): PreferenceProfile {
-  if (typeof window === "undefined") return emptyProfile();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyProfile();
-    return { ...emptyProfile(), ...(JSON.parse(raw) as PreferenceProfile) };
-  } catch {
-    return emptyProfile();
+export function applyLearningInteraction(
+  currentProfile: PreferenceProfile | undefined,
+  args: {
+    type: InteractionType;
+    platform?: string;
+    tone?: string;
+    outputFormat?: string;
+    content?: string;
+    result?: LearningResultSnapshot;
   }
-}
-
-export function saveLearningProfile(profile: PreferenceProfile) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-}
-
-export function setLearningEnabled(enabled: boolean) {
-  const profile = loadLearningProfile();
-  profile.enabled = enabled;
-  saveLearningProfile(profile);
-  return profile;
-}
-
-export function resetLearningProfile() {
-  const profile = emptyProfile();
-  saveLearningProfile(profile);
-  return profile;
-}
-
-export function recordLearningInteraction(args: {
-  type: InteractionType;
-  platform?: string;
-  tone?: string;
-  outputFormat?: string;
-  content?: string;
-  result?: LearningResultSnapshot;
-}) {
-  const profile = loadLearningProfile();
+) {
+  const profile = normalizeLearningProfile(currentProfile);
   if (!profile.enabled) return profile;
 
   const weight = interactionWeight(args.type);
@@ -251,12 +243,15 @@ export function recordLearningInteraction(args: {
   }
 
   updateBestExamples(profile, args.result, weight > 0 ? weight * 5 : 0);
-  saveLearningProfile(profile);
   return profile;
 }
 
-export function recordLearningFeedback(feedback: LearningFeedback, result?: LearningResultSnapshot) {
-  const profile = loadLearningProfile();
+export function applyLearningFeedback(
+  currentProfile: PreferenceProfile | undefined,
+  feedback: LearningFeedback,
+  result?: LearningResultSnapshot
+) {
+  const profile = normalizeLearningProfile(currentProfile);
   if (!profile.enabled) return profile;
 
   const weight = feedbackWeight(feedback);
@@ -266,7 +261,6 @@ export function recordLearningFeedback(feedback: LearningFeedback, result?: Lear
   changeWeight(profile.weightedPreferences.ctaStyles, detectCtaStyle(result?.cta), weight);
   changeWeight(profile.weightedPreferences.captionLengths, detectCaptionLength(result?.caption), weight);
   updateBestExamples(profile, result, weight * 5);
-  saveLearningProfile(profile);
   return profile;
 }
 
@@ -274,35 +268,37 @@ function topKey(map: WeightedMap) {
   return topEntries(map, 1)[0]?.[0] ?? "none yet";
 }
 
-export function getLearningSummary(profile = loadLearningProfile()) {
+export function getLearningSummary(profile?: PreferenceProfile) {
+  const normalized = normalizeLearningProfile(profile);
   return {
-    enabled: profile.enabled,
-    favoriteTone: topKey(profile.weightedPreferences.tones),
-    favoriteHookStyle: topKey(profile.weightedPreferences.hookStyles),
-    preferredCaptionLength: topKey(profile.weightedPreferences.captionLengths),
-    preferredCtaStyle: topKey(profile.weightedPreferences.ctaStyles),
-    mostUsedPlatform: topKey(profile.weightedPreferences.platforms),
-    topTopicPattern: topKey(profile.weightedPreferences.topicPatterns),
-    topExamples: profile.bestExamples.slice(0, 3)
+    enabled: normalized.enabled,
+    favoriteTone: topKey(normalized.weightedPreferences.tones),
+    favoriteHookStyle: topKey(normalized.weightedPreferences.hookStyles),
+    preferredCaptionLength: topKey(normalized.weightedPreferences.captionLengths),
+    preferredCtaStyle: topKey(normalized.weightedPreferences.ctaStyles),
+    mostUsedPlatform: topKey(normalized.weightedPreferences.platforms),
+    topTopicPattern: topKey(normalized.weightedPreferences.topicPatterns),
+    topExamples: normalized.bestExamples.slice(0, 3)
   };
 }
 
-export function buildLearningPrompt(profile = loadLearningProfile()) {
-  if (!profile.enabled) return "";
+export function buildLearningPrompt(profile?: PreferenceProfile) {
+  const normalized = normalizeLearningProfile(profile);
+  if (!normalized.enabled) return "";
 
-  const topTones = topEntries(profile.weightedPreferences.tones).map(([key, value]) => `${key} (${value.toFixed(1)})`);
-  const topHookStyles = topEntries(profile.weightedPreferences.hookStyles).map(([key, value]) => `${key} (${value.toFixed(1)})`);
-  const topLengths = topEntries(profile.weightedPreferences.captionLengths).map(([key, value]) => `${key} (${value.toFixed(1)})`);
-  const topCtas = topEntries(profile.weightedPreferences.ctaStyles).map(([key, value]) => `${key} (${value.toFixed(1)})`);
-  const topPlatforms = topEntries(profile.weightedPreferences.platforms).map(([key, value]) => `${key} (${value.toFixed(1)})`);
-  const topPatterns = topEntries(profile.patternRanking).map(([key, value]) => `${key} (${value.toFixed(1)})`);
-  const weakPatterns = Object.entries(profile.patternRanking)
+  const topTones = topEntries(normalized.weightedPreferences.tones).map(([key, value]) => `${key} (${value.toFixed(1)})`);
+  const topHookStyles = topEntries(normalized.weightedPreferences.hookStyles).map(([key, value]) => `${key} (${value.toFixed(1)})`);
+  const topLengths = topEntries(normalized.weightedPreferences.captionLengths).map(([key, value]) => `${key} (${value.toFixed(1)})`);
+  const topCtas = topEntries(normalized.weightedPreferences.ctaStyles).map(([key, value]) => `${key} (${value.toFixed(1)})`);
+  const topPlatforms = topEntries(normalized.weightedPreferences.platforms).map(([key, value]) => `${key} (${value.toFixed(1)})`);
+  const topPatterns = topEntries(normalized.patternRanking).map(([key, value]) => `${key} (${value.toFixed(1)})`);
+  const weakPatterns = Object.entries(normalized.patternRanking)
     .filter(([, value]) => value < 0)
     .sort((a, b) => a[1] - b[1])
     .slice(0, 3)
     .map(([key, value]) => `${key} (${value.toFixed(1)})`);
 
-  const examples = profile.bestExamples
+  const examples = normalized.bestExamples
     .slice(0, 3)
     .map(
       (example, index) =>
@@ -316,9 +312,72 @@ export function buildLearningPrompt(profile = loadLearningProfile()) {
     `- caption length preference: ${topLengths.join(", ") || "none yet"}`,
     `- CTA style preference: ${topCtas.join(", ") || "none yet"}`,
     `- platform preference: ${topPlatforms.join(", ") || "none yet"}`,
-    `- strongest patterns to prioritize: ${topPatterns.join(", ") || "none yet"}`,
-    `- weak patterns to avoid: ${weakPatterns.join(", ") || "none yet"}`,
-    "Generate similar style to previously high-performing outputs where it improves the result.",
-    ...examples
-  ].join("\n");
+    `- strongest patterns: ${topPatterns.join(", ") || "none yet"}`,
+    `- avoid low-performing patterns: ${weakPatterns.join(", ") || "none yet"}`,
+    examples.length ? "Generate similar style to previously high-performing outputs:\n" + examples.join("\n") : ""
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+type LearningProfileResponse = {
+  profile: PreferenceProfile;
+};
+
+async function requestLearningProfile(
+  method: "GET" | "POST",
+  body?: Record<string, unknown>
+): Promise<PreferenceProfile> {
+  const response = await fetch("/api/learning-profile", {
+    method,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    ...(body ? { body: JSON.stringify(body) } : {})
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to sync learning profile.");
+  }
+
+  const payload = (await response.json()) as LearningProfileResponse;
+  return normalizeLearningProfile(payload.profile);
+}
+
+export async function fetchLearningProfile() {
+  return requestLearningProfile("GET");
+}
+
+export async function persistLearningInteraction(args: {
+  type: InteractionType;
+  platform?: string;
+  tone?: string;
+  outputFormat?: string;
+  content?: string;
+  result?: LearningResultSnapshot;
+}) {
+  return requestLearningProfile("POST", {
+    action: "interaction",
+    interaction: args
+  });
+}
+
+export async function persistLearningFeedback(feedback: LearningFeedback, result?: LearningResultSnapshot) {
+  return requestLearningProfile("POST", {
+    action: "feedback",
+    feedback,
+    result
+  });
+}
+
+export async function persistLearningToggle(enabled: boolean) {
+  return requestLearningProfile("POST", {
+    action: "toggle",
+    enabled
+  });
+}
+
+export async function persistLearningReset() {
+  return requestLearningProfile("POST", {
+    action: "reset"
+  });
 }
