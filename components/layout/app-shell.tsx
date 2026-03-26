@@ -15,7 +15,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {session?.user?.email ? <SyncUserOnLogin email={session.user.email} /> : null}
+      <SyncUserOnLogin />
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
         <header className="sticky top-4 z-20 mb-8 rounded-[1.75rem] border border-white/10 bg-card/85 px-4 py-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

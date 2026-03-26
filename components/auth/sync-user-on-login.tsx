@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const SYNC_KEY_PREFIX = "vibed-hunter-supabase-sync";
 
-export function SyncUserOnLogin({ email }: { email: string }) {
+export function SyncUserOnLogin() {
+  const { data: session } = useSession();
+
   useEffect(() => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = session?.user?.email?.trim().toLowerCase();
     if (!normalizedEmail) return;
 
     const storageKey = `${SYNC_KEY_PREFIX}:${normalizedEmail}`;
@@ -19,11 +22,11 @@ export function SyncUserOnLogin({ email }: { email: string }) {
       try {
         const supabase = createSupabaseBrowserClient();
         if (!supabase) {
-          console.error("Saving user to Supabase (frontend) failed: missing client config");
+          console.error("Insert error:", "Supabase client not initialized");
           return;
         }
 
-        console.log("Saving user to Supabase (frontend)", { email: normalizedEmail });
+        console.log("Saving user to Supabase:", normalizedEmail);
 
         const { error } = await supabase.from("users").upsert(
           {
@@ -35,21 +38,21 @@ export function SyncUserOnLogin({ email }: { email: string }) {
         );
 
         if (error) {
-          console.error("Saving user to Supabase (frontend) error", error);
+          console.error("Insert error:", error);
           return;
         }
 
-        console.log("Saving user to Supabase (frontend) success");
+        console.log("User saved successfully");
         if (typeof window !== "undefined") {
           window.sessionStorage.setItem(storageKey, "done");
         }
       } catch (error) {
-        console.error("Saving user to Supabase (frontend) error", error);
+        console.error("Insert error:", error);
       }
     }
 
     void syncUser();
-  }, [email]);
+  }, [session]);
 
   return null;
 }
