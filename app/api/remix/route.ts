@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@/auth";
-import { saveGenerationToDatabase } from "@/lib/supabase/user-store";
+import { fetchRecentGenerationHistory, saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
 
@@ -26,6 +26,19 @@ type RemixSectionResult = {
     clarity: number;
     virality: number;
     nicheMatch: number;
+  };
+};
+
+type GenerationHistoryDebug = {
+  generationHistorySaved?: boolean;
+  generationHistoryError?: {
+    reason: "missing_client" | "table_unavailable" | "insert_failed" | "missing_fields";
+    details?: {
+      message?: string;
+      code?: string;
+      details?: string;
+      hint?: string;
+    };
   };
 };
 
@@ -73,8 +86,10 @@ function asApiResponse(result: RemixSectionResult) {
     // Legacy aliases to avoid breaking the current page while it migrates.
     pinned_comment: result.pinnedComment,
     story_text: result.story
-  };
+  } satisfies Record<string, unknown>;
 }
+
+type RemixApiResponse = ReturnType<typeof asApiResponse> & GenerationHistoryDebug;
 
 function scorePackage(input: string, result: Partial<RemixSectionResult>) {
   const text = `${input} ${result.hook ?? ""} ${result.caption ?? ""}`.toLowerCase();
@@ -291,9 +306,32 @@ function safeJsonFromText(text: string) {
   return asApiResponse(parseStructuredResult(JSON.stringify(data)));
 }
 
+function buildHistoryContext(
+  history: Array<{
+    input: string;
+    hook: string;
+    caption: string;
+    created_at?: string;
+  }>
+) {
+  if (!history.length) {
+    return "";
+  }
+
+  return [
+    "Previous examples:",
+    ...history.map(
+      (item, index) =>
+        `${index + 1}. Input: ${item.input}\n   Hook: ${item.hook}`
+    ),
+    "Match tone, structure, and hook style based on previous examples."
+  ].join("\n");
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth().catch(() => null);
+    const history = await fetchRecentGenerationHistory(session?.user?.email).catch(() => []);
     const {
       input,
       action,
@@ -320,7 +358,7 @@ export async function POST(req: Request) {
     }
 
     if (isPlaceholderKey(process.env.OPENAI_API_KEY)) {
-      const fallback = asApiResponse(
+      const fallback: RemixApiResponse = asApiResponse(
         buildFallback({
           input: trimmedInput,
           platform: platform ?? "Instagram",
@@ -328,12 +366,21 @@ export async function POST(req: Request) {
           vibedMode: Boolean(vibedMode)
         })
       );
-      await saveGenerationToDatabase({
+      const saveResult = await saveGenerationToDatabase({
         userEmail: session?.user?.email,
         input: trimmedInput,
         hook: fallback.hook,
         caption: fallback.caption
       }).catch(() => null);
+      if (saveResult) {
+        fallback.generationHistorySaved = saveResult.ok;
+        if (!saveResult.ok) {
+          fallback.generationHistoryError = {
+            reason: saveResult.reason,
+            details: "error" in saveResult ? saveResult.error : undefined
+          };
+        }
+      }
       return NextResponse.json(fallback);
     }
 
@@ -341,6 +388,8 @@ export async function POST(req: Request) {
 You are a high-performance short-form content caption writer for social media creators.
 
 Your goal is to generate viral, engaging, creator-ready captions across any niche.
+
+${buildHistoryContext(history)}
 
 Input:
 - Video description
@@ -518,13 +567,22 @@ ${trimmedInput}
     const text = response.output_text || "";
     console.error("FULL RESPONSE:", JSON.stringify(response, null, 2));
     console.error("RAW OUTPUT TEXT:", text);
-    const data = safeJsonFromText(text);
-    await saveGenerationToDatabase({
+    const data: RemixApiResponse = safeJsonFromText(text);
+    const saveResult = await saveGenerationToDatabase({
       userEmail: session?.user?.email,
       input: trimmedInput,
       hook: typeof data.hook === "string" ? data.hook : "",
       caption: typeof data.caption === "string" ? data.caption : ""
     }).catch(() => null);
+    if (saveResult) {
+      data.generationHistorySaved = saveResult.ok;
+      if (!saveResult.ok) {
+        data.generationHistoryError = {
+          reason: saveResult.reason,
+          details: "error" in saveResult ? saveResult.error : undefined
+        };
+      }
+    }
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json(emptyResponse());

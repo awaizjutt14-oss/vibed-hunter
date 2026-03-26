@@ -149,8 +149,13 @@ export async function saveGenerationToDatabase(args: {
     return { ok: false, reason: "missing_client" as const };
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("SUPABASE_SERVICE_ROLE_KEY is missing. Generation history sync is using the anon key and may be blocked by RLS.");
+  }
+
   const tableReady = await ensureGenerationHistoryTableAvailable();
   if (!tableReady) {
+    console.error("Supabase generation history save error: table unavailable.", { userEmail });
     return { ok: false, reason: "table_unavailable" as const };
   }
 
@@ -164,7 +169,7 @@ export async function saveGenerationToDatabase(args: {
   ] as any);
 
   if (error) {
-    console.error("Failed to save generation history.", error);
+    console.error("Supabase generation history insert error:", error);
     return {
       ok: false,
       reason: "insert_failed" as const,
@@ -179,4 +184,53 @@ export async function saveGenerationToDatabase(args: {
 
   console.info("Saved generation history.", { userEmail });
   return { ok: true as const };
+}
+
+export async function fetchRecentGenerationHistory(userEmail?: string | null) {
+  const normalizedEmail = userEmail?.trim().toLowerCase();
+  if (!normalizedEmail) {
+    console.info("No generation history exists: missing user email.");
+    return [];
+  }
+
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    console.error("Generation history fetch skipped: Supabase client is not configured.");
+    return [];
+  }
+
+  const tableReady = await ensureGenerationHistoryTableAvailable();
+  if (!tableReady) {
+    console.info("No generation history exists: generation_history table unavailable.", { userEmail: normalizedEmail });
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("generation_history" as any)
+    .select("input, hook, caption, created_at")
+    .eq("user_email", normalizedEmail)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error("Generation history fetch error:", error);
+    return [];
+  }
+
+  const history = Array.isArray(data) ? data : [];
+  if (history.length) {
+    console.info("Fetched generation history.", {
+      userEmail: normalizedEmail,
+      count: history.length
+    });
+  } else {
+    console.info("No generation history exists.", { userEmail: normalizedEmail });
+  }
+
+  return history as Array<{
+    input: string;
+    hook: string;
+    caption: string;
+    created_at?: string;
+  }>;
 }
