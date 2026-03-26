@@ -11,7 +11,21 @@ create table if not exists public.users (
 );
 `;
 
+const GENERATION_HISTORY_SETUP_SQL = `
+create extension if not exists pgcrypto;
+
+create table if not exists public.generation_history (
+  id uuid primary key default gen_random_uuid(),
+  user_email text not null,
+  input text not null,
+  hook text not null,
+  caption text not null,
+  created_at timestamptz not null default now()
+);
+`;
+
 let usersTableChecked = false;
+let generationHistoryChecked = false;
 
 async function ensureUsersTableAvailable() {
   if (usersTableChecked) return true;
@@ -33,6 +47,29 @@ async function ensureUsersTableAvailable() {
   }
 
   usersTableChecked = true;
+  return true;
+}
+
+async function ensureGenerationHistoryTableAvailable() {
+  if (generationHistoryChecked) return true;
+
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    console.error("Supabase generation_history check skipped: client is not configured.");
+    return false;
+  }
+
+  const { error } = await supabase.from("generation_history").select("id", { count: "exact", head: true });
+  if (error) {
+    console.error("Supabase generation_history table is not ready.", {
+      message: error.message,
+      hint: "Create public.generation_history before saving generated content.",
+      sql: GENERATION_HISTORY_SETUP_SQL
+    });
+    return false;
+  }
+
+  generationHistoryChecked = true;
   return true;
 }
 
@@ -69,5 +106,55 @@ export async function saveUserToDatabase(user: Pick<User, "email">) {
   }
 
   console.info("Supabase save success.", { email });
+  return { ok: true as const };
+}
+
+export async function saveGenerationToDatabase(args: {
+  userEmail?: string | null;
+  input: string;
+  hook: string;
+  caption: string;
+}) {
+  const userEmail = args.userEmail?.trim().toLowerCase();
+  const input = args.input.trim();
+  const hook = args.hook.trim();
+  const caption = args.caption.trim();
+
+  if (!userEmail || !input || !hook || !caption) {
+    console.error("saveGenerationToDatabase skipped: missing required fields.", {
+      hasUserEmail: Boolean(userEmail),
+      hasInput: Boolean(input),
+      hasHook: Boolean(hook),
+      hasCaption: Boolean(caption)
+    });
+    return { ok: false, reason: "missing_fields" as const };
+  }
+
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    console.error("saveGenerationToDatabase skipped: Supabase client is not configured.");
+    return { ok: false, reason: "missing_client" as const };
+  }
+
+  const tableReady = await ensureGenerationHistoryTableAvailable();
+  if (!tableReady) {
+    return { ok: false, reason: "table_unavailable" as const };
+  }
+
+  const { error } = await supabase.from("generation_history" as any).insert([
+    {
+      user_email: userEmail,
+      input,
+      hook,
+      caption
+    }
+  ] as any);
+
+  if (error) {
+    console.error("Failed to save generation history.", error);
+    return { ok: false, reason: "insert_failed" as const, error };
+  }
+
+  console.info("Saved generation history.", { userEmail });
   return { ok: true as const };
 }

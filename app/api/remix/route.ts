@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { auth } from "@/auth";
+import { saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
 
@@ -291,6 +293,7 @@ function safeJsonFromText(text: string) {
 
 export async function POST(req: Request) {
   try {
+    const session = await auth().catch(() => null);
     const {
       input,
       action,
@@ -317,16 +320,21 @@ export async function POST(req: Request) {
     }
 
     if (isPlaceholderKey(process.env.OPENAI_API_KEY)) {
-      return NextResponse.json(
-        asApiResponse(
-          buildFallback({
-            input: trimmedInput,
-            platform: platform ?? "Instagram",
-            tone: tone ?? "viral",
-            vibedMode: Boolean(vibedMode)
-          })
-        )
+      const fallback = asApiResponse(
+        buildFallback({
+          input: trimmedInput,
+          platform: platform ?? "Instagram",
+          tone: tone ?? "viral",
+          vibedMode: Boolean(vibedMode)
+        })
       );
+      await saveGenerationToDatabase({
+        userEmail: session?.user?.email,
+        input: trimmedInput,
+        hook: fallback.hook,
+        caption: fallback.caption
+      }).catch(() => null);
+      return NextResponse.json(fallback);
     }
 
     const prompt = `
@@ -511,6 +519,12 @@ ${trimmedInput}
     console.error("FULL RESPONSE:", JSON.stringify(response, null, 2));
     console.error("RAW OUTPUT TEXT:", text);
     const data = safeJsonFromText(text);
+    await saveGenerationToDatabase({
+      userEmail: session?.user?.email,
+      input: trimmedInput,
+      hook: typeof data.hook === "string" ? data.hook : "",
+      caption: typeof data.caption === "string" ? data.caption : ""
+    }).catch(() => null);
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json(emptyResponse());

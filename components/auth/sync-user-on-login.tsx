@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const SYNC_KEY_PREFIX = "vibed-hunter-supabase-sync";
 
@@ -20,34 +19,30 @@ export function SyncUserOnLogin() {
 
     async function syncUser() {
       try {
-        const supabase = createSupabaseBrowserClient();
-        if (!supabase) {
-          console.error("Insert error:", "Supabase client not initialized");
+        console.log("Calling sync-user API", { email: normalizedEmail });
+
+        const response = await fetch("/api/auth/sync-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({ email: normalizedEmail })
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+
+        if (!response.ok || !payload.ok) {
+          console.error("sync-user API error", payload.error || "Unknown sync error");
           return;
         }
 
-        console.log("Saving user to Supabase:", normalizedEmail);
-
-        const { error } = await supabase.from("users").upsert(
-          {
-            email: normalizedEmail
-          } as any,
-          {
-            onConflict: "email"
-          }
-        );
-
-        if (error) {
-          console.error("Insert error:", error);
-          return;
-        }
-
-        console.log("User saved successfully");
+        console.log("sync-user API success");
         if (typeof window !== "undefined") {
           window.sessionStorage.setItem(storageKey, "done");
         }
       } catch (error) {
-        console.error("Insert error:", error);
+        console.error("sync-user API request failed", error);
       }
     }
 
