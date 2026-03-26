@@ -20,6 +20,81 @@ type Database = {
           created_at?: string;
         };
       };
+      generation_history: {
+        Row: {
+          id: string;
+          user_email: string;
+          input: string;
+          hook: string;
+          caption: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_email: string;
+          input: string;
+          hook: string;
+          caption: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_email?: string;
+          input?: string;
+          hook?: string;
+          caption?: string;
+          created_at?: string;
+        };
+      };
+      generation_usage: {
+        Row: {
+          user_id: string;
+          user_email: string | null;
+          free_posts_used: number;
+          is_paid: boolean;
+          subscription_status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          user_email?: string | null;
+          free_posts_used?: number;
+          is_paid?: boolean;
+          subscription_status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          user_email?: string | null;
+          free_posts_used?: number;
+          is_paid?: boolean;
+          subscription_status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      generation_usage_events: {
+        Row: {
+          event_id: string;
+          user_id: string;
+          action: string;
+          created_at: string;
+        };
+        Insert: {
+          event_id: string;
+          user_id: string;
+          action: string;
+          created_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          user_id?: string;
+          action?: string;
+          created_at?: string;
+        };
+      };
     };
   };
 };

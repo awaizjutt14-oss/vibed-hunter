@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,8 @@ import {
   type LearningResultSnapshot,
   type PreferenceProfile
 } from "@/lib/remix-learning";
+import { fetchTrialStatus, DEFAULT_TRIAL_STATUS } from "@/lib/trial-client";
+import type { TrialStatusPayload } from "@/lib/trial-types";
 
 type RemixResult = {
   hook?: string;
@@ -41,6 +44,14 @@ type RemixResult = {
     nicheMatch: number;
   };
   error?: string;
+  allowed?: boolean;
+  paywall?: boolean;
+  message?: string;
+  free_posts_used?: number;
+  free_posts_limit?: number;
+  is_paid?: boolean;
+  subscription_status?: string;
+  remaining_free_generations?: number;
 };
 
 const platforms = ["Instagram", "TikTok", "YouTube Shorts", "Facebook"];
@@ -84,6 +95,7 @@ export function RemixHome() {
   const [result, setResult] = useState<RemixResult | null>(null);
   const [hookOptions, setHookOptions] = useState<string[]>([]);
   const [learningProfile, setLearningProfile] = useState<PreferenceProfile>(createEmptyLearningProfile());
+  const [trialStatus, setTrialStatus] = useState<TrialStatusPayload>(DEFAULT_TRIAL_STATUS);
 
   useEffect(() => {
     const prefill = searchParams.get("prefill");
@@ -108,6 +120,41 @@ export function RemixHome() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchTrialStatus()
+      .then((status) => {
+        if (active) setTrialStatus(status);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const isTrialExhausted = !trialStatus.is_paid && trialStatus.free_posts_used >= trialStatus.free_posts_limit;
+
+  function updateTrialStatusFromPayload(payload: Partial<TrialStatusPayload>) {
+    if (typeof payload.free_posts_used !== "number") return;
+
+    setTrialStatus({
+      allowed: typeof payload.allowed === "boolean" ? payload.allowed : true,
+      paywall: payload.paywall,
+      message: payload.message,
+      free_posts_used: payload.free_posts_used,
+      free_posts_limit:
+        typeof payload.free_posts_limit === "number" ? payload.free_posts_limit : DEFAULT_TRIAL_STATUS.free_posts_limit,
+      is_paid: Boolean(payload.is_paid),
+      subscription_status: payload.subscription_status ?? "free",
+      remaining_free_generations:
+        typeof payload.remaining_free_generations === "number"
+          ? payload.remaining_free_generations
+          : Math.max((payload.free_posts_limit ?? DEFAULT_TRIAL_STATUS.free_posts_limit) - payload.free_posts_used, 0)
+    });
+  }
 
   function updateSectionLoading(section: SectionKey, value: boolean) {
     setSectionLoading((current) => ({
@@ -172,6 +219,7 @@ export function RemixHome() {
     outputFormat: string;
     extraInstructions: string;
     vibedMode: boolean;
+    usageEventId: string;
   }>) {
     const input = (overrides?.input ?? content).trim();
 
@@ -186,16 +234,19 @@ export function RemixHome() {
         outputFormat: overrides?.outputFormat ?? outputFormat,
         extraInstructions: overrides?.extraInstructions ?? extraInstructions,
         vibedMode: overrides?.vibedMode ?? vibedMode,
-        learningProfile: buildLearningPrompt(learningProfile)
+        learningProfile: buildLearningPrompt(learningProfile),
+        usageEventId: overrides?.usageEventId ?? crypto.randomUUID()
       })
     });
 
     if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error || "Failed to transform content.");
+      const payload = (await response.json().catch(() => ({}))) as RemixResult;
+      updateTrialStatusFromPayload(payload);
+      throw new Error(payload.message || payload.error || "Failed to transform content.");
     }
 
     const payload = (await response.json()) as RemixResult;
+    updateTrialStatusFromPayload(payload);
     if (payload.error) {
       throw new Error(payload.error);
     }
@@ -220,16 +271,20 @@ export function RemixHome() {
     setError(null);
     try {
       const variants = await Promise.all(
-        [
-          "Give the strongest curiosity-first hook.",
-          "Give the cleanest replay-worthy hook.",
-          "Give the most scroll-stopping Vibed hook."
-        ].map((instruction) =>
-          requestRemix({
-            outputFormat: "Hook",
-            extraInstructions: [extraInstructions, instruction].filter(Boolean).join(". ")
-          })
-        )
+        (() => {
+          const usageEventId = crypto.randomUUID();
+          return [
+            "Give the strongest curiosity-first hook.",
+            "Give the cleanest replay-worthy hook.",
+            "Give the most scroll-stopping Vibed hook."
+          ].map((instruction) =>
+            requestRemix({
+              outputFormat: "Hook",
+              extraInstructions: [extraInstructions, instruction].filter(Boolean).join(". "),
+              usageEventId
+            })
+          );
+        })()
       );
 
       setHookOptions(
@@ -348,13 +403,31 @@ export function RemixHome() {
             <p className="text-sm leading-6 text-muted-foreground sm:text-base">
               Turn rough ideas into hooks, captions, and creator-ready content.
             </p>
+            <div className="flex flex-wrap items-center gap-3 pt-1 text-sm text-muted-foreground">
+              {trialStatus.is_paid ? (
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+                  Pro access active
+                </span>
+              ) : (
+                <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1">
+                  {trialStatus.remaining_free_generations > 0
+                    ? `Free generations left: ${trialStatus.remaining_free_generations} / ${trialStatus.free_posts_limit}`
+                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations`}
+                </span>
+              )}
+              {isTrialExhausted ? (
+                <Link href="/settings" className="text-primary underline-offset-4 hover:underline">
+                  Upgrade to continue
+                </Link>
+              ) : null}
+            </div>
           </div>
           <Button
             onClick={transform}
-            disabled={loading}
+            disabled={loading || isTrialExhausted}
             className="h-12 rounded-2xl px-6 text-base shadow-[0_12px_32px_rgba(34,197,94,0.22)]"
           >
-            {loading ? "Crafting your viral post..." : "Start designing"}
+            {loading ? "Crafting your viral post..." : isTrialExhausted ? "Upgrade to continue" : "Start designing"}
           </Button>
         </div>
       </section>
@@ -443,20 +516,25 @@ export function RemixHome() {
           <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={transform}
-              disabled={loading}
+              disabled={loading || isTrialExhausted}
               className="h-12 rounded-2xl px-6 text-base shadow-[0_12px_32px_rgba(34,197,94,0.22)]"
             >
-              {loading ? "Crafting your viral post..." : "Generate"}
+              {loading ? "Crafting your viral post..." : isTrialExhausted ? "Upgrade to continue" : "Generate"}
             </Button>
             <Button
               onClick={generateHooks}
-              disabled={hooksLoading}
+              disabled={hooksLoading || isTrialExhausted}
               variant="secondary"
               className="h-12 rounded-2xl px-6 text-base transition-all"
             >
               {hooksLoading ? "Generating hooks..." : "Generate 3 hooks"}
             </Button>
           </div>
+          {isTrialExhausted ? (
+            <div className="rounded-[1.25rem] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              You’ve used your 3 free generations. Upgrade to continue.
+            </div>
+          ) : null}
           {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
           {hookOptions.length ? (

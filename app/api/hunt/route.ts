@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { recordSuccessfulGeneration, requireGenerationAccess } from "@/lib/generation-access";
 
 export const runtime = "nodejs";
 
@@ -93,10 +94,24 @@ function normalizeIdeas(raw: unknown): HuntIdea[] {
   return ideas.length === 3 ? ideas : fallbackIdeas();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  let access: Awaited<ReturnType<typeof requireGenerationAccess>> | null = null;
+  const usageEventId = new URL(request.url).searchParams.get("usageEventId")?.trim() || undefined;
+
   try {
+    access = await requireGenerationAccess("hunt");
+    if (!access.allowed) {
+      return NextResponse.json(access.body, { status: access.status });
+    }
+
     if (isPlaceholderKey(process.env.OPENAI_API_KEY)) {
-      return NextResponse.json({ posts: fallbackIdeas() });
+      const trial = await recordSuccessfulGeneration({
+        actor: access.actor,
+        usage: access.usage,
+        action: "hunt",
+        usageEventId
+      });
+      return NextResponse.json({ posts: fallbackIdeas(), ...trial });
     }
 
     const prompt = `
@@ -151,11 +166,32 @@ Rules:
     try {
       data = JSON.parse(text) as { posts?: unknown };
     } catch {
-      return NextResponse.json({ posts: fallbackIdeas() });
+      const trial = await recordSuccessfulGeneration({
+        actor: access.actor,
+        usage: access.usage,
+        action: "hunt",
+        usageEventId
+      });
+      return NextResponse.json({ posts: fallbackIdeas(), ...trial });
     }
 
-    return NextResponse.json({ posts: normalizeIdeas(data.posts) });
+    const trial = await recordSuccessfulGeneration({
+      actor: access.actor,
+      usage: access.usage,
+      action: "hunt",
+      usageEventId
+    });
+    return NextResponse.json({ posts: normalizeIdeas(data.posts), ...trial });
   } catch {
+    if (access?.allowed) {
+      const trial = await recordSuccessfulGeneration({
+        actor: access.actor,
+        usage: access.usage,
+        action: "hunt",
+        usageEventId
+      });
+      return NextResponse.json({ posts: fallbackIdeas(), ...trial });
+    }
     return NextResponse.json({ posts: fallbackIdeas() });
   }
 }

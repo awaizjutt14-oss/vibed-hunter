@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { recordSuccessfulGeneration, requireGenerationAccess } from "@/lib/generation-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ type ReqBody = {
   topic?: string;
   platform?: "instagram" | "tiktok" | "youtube";
   contentType?: string;
+  usageEventId?: string;
 };
 
 const fallback = {
@@ -23,15 +25,31 @@ export async function POST(req: Request) {
   const topic = (body.topic ?? "")?.toString().slice(0, 300).trim();
   const platform = (body.platform ?? "instagram") as ReqBody["platform"];
   const contentType = (body.contentType ?? "engineering")?.toString();
+  const usageEventId = body.usageEventId?.toString().trim();
 
   if (!topic) {
     return NextResponse.json({ error: "Topic is required" }, { status: 400 });
   }
 
+  const access = await requireGenerationAccess("viral");
+  if (!access.allowed) {
+    return NextResponse.json(access.body, { status: access.status });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!hasUsableOpenAIKey(apiKey)) {
     // No key in env; return a safe fallback so the app works in demo mode
-    return NextResponse.json({ ...fallback, note: "Using demo fallback (missing or placeholder OPENAI_API_KEY)" });
+    const trial = await recordSuccessfulGeneration({
+      actor: access.actor,
+      usage: access.usage,
+      action: "viral",
+      usageEventId
+    });
+    return NextResponse.json({
+      ...fallback,
+      note: "Using demo fallback (missing or placeholder OPENAI_API_KEY)",
+      ...trial
+    });
   }
 
   const client = new OpenAI({ apiKey });
@@ -97,13 +115,31 @@ Return JSON only.`;
     }
 
     if (!parsed || !parsed.hook || !parsed.caption) {
-      return NextResponse.json({ ...fallback, note: "Fallback used (parse failed)" });
+      const trial = await recordSuccessfulGeneration({
+        actor: access.actor,
+        usage: access.usage,
+        action: "viral",
+        usageEventId
+      });
+      return NextResponse.json({ ...fallback, note: "Fallback used (parse failed)", ...trial });
     }
 
-    return NextResponse.json(normalizeOutput(parsed));
+    const trial = await recordSuccessfulGeneration({
+      actor: access.actor,
+      usage: access.usage,
+      action: "viral",
+      usageEventId
+    });
+    return NextResponse.json({ ...normalizeOutput(parsed), ...trial });
   } catch (err) {
     console.error("caption API error", err);
-    return NextResponse.json({ ...fallback, note: "Fallback used (API error)" });
+    const trial = await recordSuccessfulGeneration({
+      actor: access.actor,
+      usage: access.usage,
+      action: "viral",
+      usageEventId
+    });
+    return NextResponse.json({ ...fallback, note: "Fallback used (API error)", ...trial });
   }
 }
 

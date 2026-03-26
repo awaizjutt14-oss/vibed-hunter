@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/vibed/copy-button";
+import { DEFAULT_TRIAL_STATUS, fetchTrialStatus } from "@/lib/trial-client";
+import type { TrialStatusPayload } from "@/lib/trial-types";
 
 type Result = {
   hook: string;
@@ -12,6 +15,14 @@ type Result = {
   pinned_comment: string;
   hashtags: string[];
   note?: string;
+  allowed?: boolean;
+  paywall?: boolean;
+  message?: string;
+  free_posts_used?: number;
+  free_posts_limit?: number;
+  is_paid?: boolean;
+  subscription_status?: string;
+  remaining_free_generations?: number;
 };
 
 const contentTypes = ["engineering", "machines", "satisfying processes", "precision work", "AI/tech", "manufacturing"];
@@ -23,6 +34,31 @@ export default function ViralPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [trialStatus, setTrialStatus] = useState<TrialStatusPayload>(DEFAULT_TRIAL_STATUS);
+
+  useEffect(() => {
+    void fetchTrialStatus()
+      .then((status) => setTrialStatus(status))
+      .catch(() => undefined);
+  }, []);
+
+  const isTrialExhausted = !trialStatus.is_paid && trialStatus.free_posts_used >= trialStatus.free_posts_limit;
+
+  function updateTrialStatus(payload: Partial<TrialStatusPayload>) {
+    if (typeof payload.free_posts_used !== "number") return;
+    setTrialStatus({
+      allowed: typeof payload.allowed === "boolean" ? payload.allowed : true,
+      paywall: payload.paywall,
+      message: payload.message,
+      free_posts_used: payload.free_posts_used,
+      free_posts_limit: payload.free_posts_limit ?? DEFAULT_TRIAL_STATUS.free_posts_limit,
+      is_paid: Boolean(payload.is_paid),
+      subscription_status: payload.subscription_status ?? "free",
+      remaining_free_generations:
+        payload.remaining_free_generations ??
+        Math.max((payload.free_posts_limit ?? DEFAULT_TRIAL_STATUS.free_posts_limit) - payload.free_posts_used, 0)
+    });
+  }
 
   async function generate() {
     setLoading(true);
@@ -31,13 +67,13 @@ export default function ViralPage() {
       const res = await fetch("/api/captions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, platform, contentType })
+        body: JSON.stringify({ topic, platform, contentType, usageEventId: crypto.randomUUID() })
       });
+      const json = (await res.json().catch(() => ({}))) as Result;
+      updateTrialStatus(json);
       if (!res.ok) {
-        const t = await res.json().catch(() => ({}));
-        throw new Error(t.error || "Failed to generate");
+        throw new Error(json.message || "Failed to generate");
       }
-      const json = (await res.json()) as Result;
       setResult(json);
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong");
@@ -54,9 +90,27 @@ export default function ViralPage() {
             <p className="text-xs uppercase tracking-[0.18em] text-primary">Viral Caption Bot</p>
             <h1 className="text-3xl font-semibold">Create a Vibed-ready post in one tap.</h1>
             <p className="text-sm text-muted-foreground">Hook, caption, pinned comment, and hashtags—auto-formatted for {platform}.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {trialStatus.is_paid ? (
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+                  Pro access active
+                </span>
+              ) : (
+                <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1">
+                  {trialStatus.remaining_free_generations > 0
+                    ? `Free generations left: ${trialStatus.remaining_free_generations} / ${trialStatus.free_posts_limit}`
+                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations`}
+                </span>
+              )}
+              {isTrialExhausted ? (
+                <Link href="/settings" className="text-primary underline-offset-4 hover:underline">
+                  Upgrade to continue
+                </Link>
+              ) : null}
+            </div>
           </div>
-          <Button onClick={generate} disabled={loading}>
-            {loading ? "Generating..." : "Generate"}
+          <Button onClick={generate} disabled={loading || isTrialExhausted}>
+            {loading ? "Generating..." : isTrialExhausted ? "Upgrade to continue" : "Generate"}
           </Button>
         </div>
 
@@ -100,6 +154,9 @@ export default function ViralPage() {
             </div>
           </div>
         </div>
+        {isTrialExhausted ? (
+          <p className="mt-3 text-sm text-amber-300">You’ve used your 3 free generations. Upgrade to continue.</p>
+        ) : null}
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </Card>
 

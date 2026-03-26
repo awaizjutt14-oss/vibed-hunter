@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@/auth";
+import { recordSuccessfulGeneration, requireGenerationAccess } from "@/lib/generation-access";
 import { fetchRecentGenerationHistory, saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
@@ -331,7 +332,6 @@ function buildHistoryContext(
 export async function POST(req: Request) {
   try {
     const session = await auth().catch(() => null);
-    const history = await fetchRecentGenerationHistory(session?.user?.email).catch(() => []);
     const {
       input,
       action,
@@ -340,7 +340,8 @@ export async function POST(req: Request) {
       outputFormat,
       extraInstructions,
       vibedMode,
-      learningProfile
+      learningProfile,
+      usageEventId
     } = (await req.json()) as {
       input?: string;
       action?: string;
@@ -350,12 +351,20 @@ export async function POST(req: Request) {
       extraInstructions?: string;
       vibedMode?: boolean;
       learningProfile?: string;
+      usageEventId?: string;
     };
 
     const trimmedInput = input?.trim();
     if (!trimmedInput) {
       return NextResponse.json(emptyResponse("Input is required."), { status: 400 });
     }
+
+    const access = await requireGenerationAccess("remix");
+    if (!access.allowed) {
+      return NextResponse.json(access.body, { status: access.status });
+    }
+
+    const history = await fetchRecentGenerationHistory(session?.user?.email).catch(() => []);
 
     if (isPlaceholderKey(process.env.OPENAI_API_KEY)) {
       const fallback: RemixApiResponse = asApiResponse(
@@ -381,7 +390,13 @@ export async function POST(req: Request) {
           };
         }
       }
-      return NextResponse.json(fallback);
+      const trial = await recordSuccessfulGeneration({
+        actor: access.actor,
+        usage: access.usage,
+        action: "remix",
+        usageEventId: usageEventId?.trim()
+      });
+      return NextResponse.json({ ...fallback, ...trial });
     }
 
     const prompt = `
@@ -590,7 +605,13 @@ ${trimmedInput}
         };
       }
     }
-    return NextResponse.json(data);
+    const trial = await recordSuccessfulGeneration({
+      actor: access.actor,
+      usage: access.usage,
+      action: "remix",
+      usageEventId: usageEventId?.trim()
+    });
+    return NextResponse.json({ ...data, ...trial });
   } catch (error: any) {
     return NextResponse.json(emptyResponse());
   }
