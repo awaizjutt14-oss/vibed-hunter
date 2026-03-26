@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const SYNC_KEY_PREFIX = "vibed-hunter-supabase-sync";
 
@@ -16,30 +17,34 @@ export function SyncUserOnLogin({ email }: { email: string }) {
 
     async function syncUser() {
       try {
-        console.log("Calling sync-user API", { email: normalizedEmail });
-
-        const response = await fetch("/api/auth/sync-user", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include",
-          body: JSON.stringify({ email: normalizedEmail })
-        });
-
-        const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-
-        if (!response.ok || !payload.ok) {
-          console.error("sync-user API error", payload.error || "Unknown sync error");
+        const supabase = createSupabaseBrowserClient();
+        if (!supabase) {
+          console.error("Saving user to Supabase (frontend) failed: missing client config");
           return;
         }
 
-        console.log("sync-user API success");
+        console.log("Saving user to Supabase (frontend)", { email: normalizedEmail });
+
+        const { error } = await supabase.from("users").upsert(
+          {
+            email: normalizedEmail
+          } as any,
+          {
+            onConflict: "email"
+          }
+        );
+
+        if (error) {
+          console.error("Saving user to Supabase (frontend) error", error);
+          return;
+        }
+
+        console.log("Saving user to Supabase (frontend) success");
         if (typeof window !== "undefined") {
           window.sessionStorage.setItem(storageKey, "done");
         }
       } catch (error) {
-        console.error("sync-user API request failed", error);
+        console.error("Saving user to Supabase (frontend) error", error);
       }
     }
 
