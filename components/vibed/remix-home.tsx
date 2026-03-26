@@ -393,152 +393,183 @@ export function RemixHome() {
 
   return (
     <main className="flex flex-col gap-8">
-      <section className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-card via-card to-card/70 px-6 py-8 shadow-[0_24px_100px_rgba(0,0,0,0.35)] sm:px-8 sm:py-10">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-xs uppercase tracking-[0.22em] text-primary/90">Vibed Hunter</p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Design your next post in seconds
-            </h1>
-            <p className="text-sm leading-6 text-muted-foreground sm:text-base">
-              Turn rough ideas into hooks, captions, and creator-ready content.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-sm text-muted-foreground">
-              {trialStatus.is_paid ? (
-                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-300">
-                  Pro access active
-                </span>
-              ) : (
-                <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1">
-                  {trialStatus.remaining_free_generations > 0
-                    ? `Free generations left: ${trialStatus.remaining_free_generations} / ${trialStatus.free_posts_limit}`
-                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations`}
-                </span>
-              )}
-              {isTrialExhausted ? (
-                <Link href="/settings" className="text-primary underline-offset-4 hover:underline">
-                  Upgrade to continue
-                </Link>
-              ) : null}
+      <section className="vibed-glass vibed-glow-ring relative overflow-hidden rounded-[2.25rem] px-6 py-8 shadow-[0_36px_140px_rgba(0,0,0,0.42)] sm:px-8 sm:py-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,255,182,0.16),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(124,242,255,0.12),transparent_24%),linear-gradient(120deg,rgba(255,255,255,0.02),transparent_50%)]" />
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl space-y-5">
+            <span className="vibed-badge text-emerald-200/75">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(73,255,182,0.9)]" />
+              Vibed Media Creator Console
+            </span>
+            <div className="space-y-4">
+              <h1 className="max-w-3xl text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
+                Design your next post in seconds
+              </h1>
+              <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                Turn rough ideas into hooks, captions, and creator-ready content with a cinematic workflow built for
+                high-performance social storytelling.
+              </p>
             </div>
+            <TrialStatusPanel status={trialStatus} exhausted={isTrialExhausted} compact={false} />
           </div>
-          <Button
-            onClick={transform}
-            disabled={loading || isTrialExhausted}
-            className="h-12 rounded-2xl px-6 text-base shadow-[0_12px_32px_rgba(34,197,94,0.22)]"
-          >
-            {loading ? "Crafting your viral post..." : isTrialExhausted ? "Upgrade to continue" : "Start designing"}
-          </Button>
-        </div>
-      </section>
-
-      <Card className="rounded-[1.75rem] border border-white/10 bg-card/85 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.22)] backdrop-blur sm:p-6">
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.22em] text-primary/90">Design your next post</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Design your next post</h2>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-sm font-medium">What is your post about?</label>
-            <Textarea
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Paste a caption, hook, rough draft, notes, or post idea..."
-              className="min-h-[180px] rounded-[1.25rem] border-white/10 bg-background/80"
-            />
-          </div>
-
-          <Field label="Platform">
-            <Select value={platform} onChange={setPlatform} options={platforms} />
-          </Field>
-
-          <div className="flex flex-wrap gap-2">
-            {presets.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => applyPreset(preset)}
-                className={`rounded-full border px-4 py-2 text-sm transition-all ${
-                  tone === preset.tone && extraInstructions === preset.extraInstructions
-                    ? "border-primary/40 bg-primary/10 text-foreground"
-                    : "border-white/10 bg-background/60 text-muted-foreground hover:border-white/20 hover:text-foreground"
-                }`}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <details className="rounded-[1.25rem] border border-white/10 bg-background/50 p-4">
-            <summary className="cursor-pointer list-none text-sm font-medium text-foreground">
-              Advanced options
-            </summary>
-            <div className="mt-4 grid gap-5">
-              <Field label="Style">
-                <Select value={tone} onChange={setTone} options={tones} />
-              </Field>
-
-              <Field label="Output format">
-                <Select value={outputFormat} onChange={setOutputFormat} options={outputFormats} />
-              </Field>
-
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Vibed mode</label>
-                <button
-                  type="button"
-                  onClick={() => setVibedMode((current) => !current)}
-                  className={`flex h-12 w-full items-center justify-between rounded-2xl border px-4 text-sm transition ${
-                    vibedMode
-                      ? "border-primary/40 bg-primary/10 text-foreground"
-                      : "border-white/10 bg-background text-muted-foreground"
-                  }`}
-                >
-                  <span>{vibedMode ? "On" : "Off"}</span>
-                  <span className="text-xs uppercase tracking-[0.16em]">
-                    {vibedMode ? "Premium Vibed style" : "Standard remix"}
-                  </span>
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Extra instructions</label>
-                <Textarea
-                  value={extraInstructions}
-                  onChange={(event) => setExtraInstructions(event.target.value)}
-                  placeholder="e.g. stronger hook, more curiosity, shorter"
-                  className="min-h-[120px] rounded-[1.25rem] border-white/10 bg-background/80"
-                />
-              </div>
+          <div className="flex w-full max-w-sm flex-col gap-4 rounded-[1.8rem] border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Launch Sequence</p>
+              <p className="text-sm leading-6 text-slate-300">
+                Shape the concept, generate the package, and refine the strongest angle without leaving the screen.
+              </p>
             </div>
-          </details>
-
-          <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={transform}
               disabled={loading || isTrialExhausted}
-              className="h-12 rounded-2xl px-6 text-base shadow-[0_12px_32px_rgba(34,197,94,0.22)]"
+              className="h-12 rounded-[1.2rem] text-base"
             >
-              {loading ? "Crafting your viral post..." : isTrialExhausted ? "Upgrade to continue" : "Generate"}
-            </Button>
-            <Button
-              onClick={generateHooks}
-              disabled={hooksLoading || isTrialExhausted}
-              variant="secondary"
-              className="h-12 rounded-2xl px-6 text-base transition-all"
-            >
-              {hooksLoading ? "Generating hooks..." : "Generate 3 hooks"}
+              {loading ? "Crafting your viral post..." : isTrialExhausted ? "Upgrade to continue" : "Start designing"}
             </Button>
           </div>
-          {isTrialExhausted ? (
-            <div className="rounded-[1.25rem] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-              You’ve used your 3 free generations. Upgrade to continue.
+        </div>
+      </section>
+
+      <Card className="overflow-hidden rounded-[2rem] p-0">
+        <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="border-b border-white/8 p-6 sm:p-7 lg:border-b-0 lg:border-r">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
+                  Creator Input
+                </p>
+                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white sm:text-[2rem]">
+                  Design your next post
+                </h2>
+                <p className="max-w-xl text-sm leading-6 text-slate-400">
+                  Drop in a rough idea, script fragment, or post concept. Vibed Hunter will reshape it into a premium
+                  short-form package.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-100">What is your post about?</label>
+                <Textarea
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  placeholder="Paste a caption, hook, rough draft, notes, or post idea..."
+                  className="min-h-[220px]"
+                />
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <Field label="Platform">
+                  <Select value={platform} onChange={setPlatform} options={platforms} />
+                </Field>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={transform}
+                    disabled={loading || isTrialExhausted}
+                    className="h-12 min-w-[12rem] rounded-[1.2rem] text-base"
+                  >
+                    {loading ? "Crafting your viral post..." : isTrialExhausted ? "Upgrade to continue" : "Generate"}
+                  </Button>
+                  <Button
+                    onClick={generateHooks}
+                    disabled={hooksLoading || isTrialExhausted}
+                    variant="secondary"
+                    className="h-12 rounded-[1.2rem] px-5 text-base"
+                  >
+                    {hooksLoading ? "Generating hooks..." : "Generate 3 hooks"}
+                  </Button>
+                </div>
+              </div>
+
+              {error ? <p className="text-sm text-red-400">{error}</p> : null}
             </div>
-          ) : null}
-          {error ? <p className="text-sm text-red-500">{error}</p> : null}
+          </div>
+
+          <div className="flex flex-col gap-6 p-6 sm:p-7">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Mode Matrix</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                    Choose the emotional direction, then refine the final output only if you need more control.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                {presets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className={`rounded-[1.15rem] border px-4 py-3 text-left text-sm transition-all duration-300 ${
+                      tone === preset.tone && extraInstructions === preset.extraInstructions
+                        ? "border-emerald-300/30 bg-emerald-400/[0.08] text-white shadow-[0_16px_34px_rgba(73,255,182,0.12)]"
+                        : "border-white/8 bg-white/[0.025] text-slate-400 hover:border-white/16 hover:bg-white/[0.04] hover:text-slate-100"
+                    }`}
+                  >
+                    <span className="block font-medium">{preset.label}</span>
+                    <span className="mt-1 block text-xs uppercase tracking-[0.18em] text-slate-500">{preset.tone}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <TrialStatusPanel status={trialStatus} exhausted={isTrialExhausted} compact />
+
+            <details className="rounded-[1.5rem] border border-white/8 bg-white/[0.025] p-5">
+              <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
+                Advanced options
+              </summary>
+              <div className="mt-5 grid gap-5">
+                <Field label="Style">
+                  <Select value={tone} onChange={setTone} options={tones} />
+                </Field>
+
+                <Field label="Output format">
+                  <Select value={outputFormat} onChange={setOutputFormat} options={outputFormats} />
+                </Field>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-100">Vibed mode</label>
+                  <button
+                    type="button"
+                    onClick={() => setVibedMode((current) => !current)}
+                    className={`flex h-12 w-full items-center justify-between rounded-[1.2rem] border px-4 text-sm transition-all duration-300 ${
+                      vibedMode
+                        ? "border-emerald-300/30 bg-emerald-400/[0.08] text-white"
+                        : "border-white/10 bg-black/20 text-slate-400"
+                    }`}
+                  >
+                    <span>{vibedMode ? "On" : "Off"}</span>
+                    <span className="text-xs uppercase tracking-[0.16em]">
+                      {vibedMode ? "Premium Vibed style" : "Standard remix"}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-100">Extra instructions</label>
+                  <Textarea
+                    value={extraInstructions}
+                    onChange={(event) => setExtraInstructions(event.target.value)}
+                    placeholder="e.g. stronger hook, more curiosity, shorter"
+                    className="min-h-[130px]"
+                  />
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
 
           {hookOptions.length ? (
-            <div className="grid gap-3 pt-2 sm:grid-cols-3">
+            <div className="border-t border-white/8 px-6 py-6 sm:px-7">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Hook Options</p>
+                  <p className="mt-1 text-sm text-slate-300">Pick the strongest opening before you refine the full package.</p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
               {hookOptions.map((hook) => (
                 <button
                   key={hook}
@@ -561,26 +592,29 @@ export function RemixHome() {
                   }
                   className={`rounded-[1.25rem] border p-4 text-left text-sm transition-all ${
                     (result?.hook ?? "") === hook
-                      ? "border-primary/40 bg-primary/10 text-foreground shadow-[0_10px_24px_rgba(34,197,94,0.12)]"
-                      : "border-white/10 bg-background/60 text-muted-foreground hover:border-white/20 hover:text-foreground"
+                      ? "border-emerald-300/30 bg-emerald-400/[0.08] text-white shadow-[0_18px_40px_rgba(73,255,182,0.12)]"
+                      : "border-white/8 bg-white/[0.025] text-slate-400 hover:border-white/16 hover:text-white"
                   }`}
                 >
                   {hook}
                 </button>
               ))}
             </div>
+            </div>
           ) : null}
-        </div>
       </Card>
 
       {result ? (
         <section className="space-y-4">
-          <Card className="rounded-[1.75rem] border border-white/10 bg-card/85 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.18)] backdrop-blur sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold tracking-tight text-foreground">Transformed Result</p>
+          <Card className="rounded-[2rem] p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/75">Output Package</p>
+                <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">Transformed Result</p>
+              </div>
               <CopyButton label="Copy all" value={buildFullResult(result)} variant="ghost" />
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="secondary"
@@ -610,7 +644,7 @@ export function RemixHome() {
                 Performed badly
               </Button>
             </div>
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
               <Section
                 title="Hook"
                 content={result.hook ?? ""}
@@ -719,7 +753,7 @@ export function RemixHome() {
               <div className="lg:col-span-2">
                 <Button
                   variant="secondary"
-                  className="rounded-2xl"
+                  className="rounded-[1.15rem]"
                   onClick={() =>
                     syncInteraction({
                       type: "saved_result",
@@ -760,7 +794,7 @@ function buildFullResult(result: RemixResult) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <label className="text-sm font-medium">{label}</label>
+      <label className="text-sm font-medium text-slate-100">{label}</label>
       {children}
     </div>
   );
@@ -779,7 +813,7 @@ function Select({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-12 w-full rounded-2xl border border-white/10 bg-background/80 px-4 text-sm text-foreground shadow-sm"
+      className="h-12 w-full rounded-[1.2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,13,19,0.92),rgba(7,10,15,0.88))] px-4 text-sm text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition-all duration-300 focus:border-emerald-300/25 focus:shadow-[0_0_0_4px_rgba(73,255,182,0.08)]"
     >
       {options.map((option) => (
         <option key={option} value={option}>
@@ -812,9 +846,9 @@ function Section({
   highlight?: boolean;
 }) {
   return (
-    <div className={`space-y-2 rounded-[1.25rem] border border-white/10 bg-background/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.12)] transition-all duration-200 hover:border-white/20 ${className ?? ""}`}>
+    <div className={`vibed-glass rounded-[1.35rem] p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/14 ${className ?? ""}`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/75">{title}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/70">{title}</p>
         <div className="flex items-center gap-2">
           {onAction ? (
             <Button size="sm" variant="ghost" onClick={onAction} disabled={actionDisabled}>
@@ -827,12 +861,76 @@ function Section({
       <p
         className={`whitespace-pre-wrap ${
           highlight
-            ? "text-xl font-semibold leading-8 tracking-tight text-foreground sm:text-2xl"
-            : "text-sm leading-6 text-muted-foreground"
+            ? "text-2xl font-semibold leading-8 tracking-[-0.03em] text-white sm:text-[2rem]"
+            : "text-sm leading-6 text-slate-300"
         }`}
       >
         {content}
       </p>
+    </div>
+  );
+}
+
+function TrialStatusPanel({
+  status,
+  exhausted,
+  compact
+}: {
+  status: TrialStatusPayload;
+  exhausted: boolean;
+  compact?: boolean;
+}) {
+  const progress = Math.min((status.free_posts_used / status.free_posts_limit) * 100, 100);
+
+  if (status.is_paid) {
+    return (
+      <div className={`rounded-[1.5rem] border border-emerald-300/18 bg-emerald-400/[0.07] p-4 ${compact ? "" : "max-w-xl"}`}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/75">Access</p>
+            <p className="mt-2 text-base font-semibold text-white">Pro access active</p>
+          </div>
+          <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100">
+            Unlimited
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`rounded-[1.5rem] border ${exhausted ? "border-amber-300/18 bg-amber-300/[0.07]" : "border-white/10 bg-white/[0.03]"} p-4 ${compact ? "" : "max-w-xl"}`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Free Trial</p>
+          <p className="mt-2 text-base font-semibold text-white">
+            {exhausted
+              ? "You’ve used your 3 free generations."
+              : `Free generations left: ${status.remaining_free_generations} / ${status.free_posts_limit}`}
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            {exhausted
+              ? "Upgrade to keep generating premium post packages."
+              : `You’ve used ${status.free_posts_used} of ${status.free_posts_limit} free generations.`}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-28">
+            <div className="h-2 overflow-hidden rounded-full bg-white/8">
+              <div
+                className={`h-full rounded-full ${exhausted ? "bg-amber-300" : "bg-[linear-gradient(90deg,#49ffb6,#7cf2ff)]"}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+          <Link
+            href="/settings"
+            className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-white transition-all duration-300 hover:border-white/18 hover:bg-white/[0.08]"
+          >
+            Upgrade
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
