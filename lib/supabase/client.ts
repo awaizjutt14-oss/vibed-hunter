@@ -6,17 +6,17 @@ type Database = {
       users: {
         Row: {
           id: string;
-          email: string;
+          user_email: string;
           created_at: string;
         };
         Insert: {
           id?: string;
-          email: string;
+          user_email: string;
           created_at?: string;
         };
         Update: {
           id?: string;
-          email?: string;
+          user_email?: string;
           created_at?: string;
         };
       };

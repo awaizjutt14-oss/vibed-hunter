@@ -6,7 +6,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
-  email text not null unique,
+  user_email text not null unique,
   created_at timestamptz not null default now()
 );
 `;
@@ -96,12 +96,12 @@ export async function saveUserToDatabase(user: Pick<User, "email">) {
 
   const usersTable = supabase.from("users" as any);
 
-  const { error: insertError } = await usersTable.upsert([{ email }] as any, {
-    onConflict: "email",
+  const { error: insertError } = await usersTable.upsert([{ user_email: email }] as any, {
+    onConflict: "user_email",
     ignoreDuplicates: true
   });
   if (insertError) {
-    console.error("Failed to insert Supabase user.", insertError);
+    console.error("Supabase insert error:", insertError);
     return { ok: false, reason: "insert_failed" as const, error: insertError };
   }
 
