@@ -411,11 +411,13 @@ STRUCTURE
 - Strong, scroll-stopping
 - Curiosity or emotional pull
 - Max 1 emoji
+- 6 to 10 words max
 - Avoid:
   “This is”
   “Here is”
   “Watch”
 - Make the hook surprising, specific, or contrast-driven
+- Make the hook feel unexpected and outcome-driven
 - Avoid generic phrases like:
   “AI is changing everything”
   “This AI works while you sleep”
@@ -442,6 +444,7 @@ STRUCTURE
   - no similar wording
   - no repeated structure
 - Aim for shocking, intriguing, slightly unbelievable energy
+- The final hook should feel like something Pubity, UNILAD, or Vibed Media would actually post
 
 2. Pattern Interrupt
 - Add contrast:
@@ -451,6 +454,7 @@ or similar
 3. Simple Explanation
 - 1–2 short lines
 - Very simple language
+- Keep a fast rhythm and remove filler
 
 4. Tension / Risk
 - Show difficulty, danger, or what could go wrong
@@ -469,6 +473,7 @@ or similar
 8. Curiosity Line
 - Add intrigue or deeper meaning
 - Make the viewer feel like they are missing something important if they skip it
+- Add one clear curiosity gap before the CTA
 
 9. Engagement Question
 - Simple, comment-driving question
@@ -480,10 +485,12 @@ or similar
   - tech → “Follow for simple tech explained.”
   - fitness → “Follow for daily discipline.”
   - general → “Follow for more content like this.”
+- CTA must match the topic and feel short, natural, and non-generic
 
 STYLE RULES
 - Keep each line short
 - Max 1–2 sentences per line
+- Keep paragraphs to 1–2 lines max
 - Clean spacing between lines
 - Use only 1–2 emojis total
 - Tone:
@@ -519,10 +526,10 @@ Return ONLY valid JSON with these keys:
 }
 
 Additional package rules:
-- hook: 6 to 10 words, max 1 tasteful emoji, no generic phrasing, and it must feel specific and impossible to ignore.
-- caption: follow the caption system above, keep it easy to skim, and make it feel more emotional, more tense, and more story-driven.
+- hook: 6 to 10 words, max 1 tasteful emoji, no generic phrasing, high curiosity, strong outcome, and it must feel unexpected.
+- caption: follow the caption system above, keep it easy to skim, use short punchy lines, remove filler sentences, add one curiosity gap, and end with an engagement question.
 - pinnedComment: one short engagement line.
-- cta: adapt naturally to the content.
+- cta: adapt naturally to the topic, keep it short, and avoid generic wording.
 - hashtags: exactly 3 or 4 simple relevant hashtags.
 - story: concise overlay/story text.
 - bestPostTime:
