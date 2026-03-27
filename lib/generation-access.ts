@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { FREE_POSTS_LIMIT, type TrialStatusPayload } from "@/lib/trial-types";
+import { FREE_POSTS_LIMIT, FREE_POSTS_WINDOW_DAYS, type TrialStatusPayload } from "@/lib/trial-types";
 import { countGenerationHistoryForUser } from "@/lib/supabase/user-store";
 
 type TrialAction = "remix" | "viral" | "hunt" | "packets";
@@ -24,6 +24,10 @@ type AccessBlocked = {
 
 const rateLimitStore = new Map<string, number[]>();
 
+function getUsageWindowStart() {
+  return new Date(Date.now() - FREE_POSTS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+}
+
 function buildTrialStatus(args: {
   freePostsUsed: number;
   isPaid: boolean;
@@ -41,7 +45,7 @@ function buildTrialStatus(args: {
         ? "Sign in to continue."
         : args.allowed
           ? undefined
-          : "You’ve used your free generations."),
+          : "You’ve used your 3 free generations this month. Upgrade to continue."),
     free_posts_used: args.freePostsUsed,
     free_posts_limit: FREE_POSTS_LIMIT,
     is_paid: args.isPaid,
@@ -101,7 +105,7 @@ export async function getCurrentTrialStatus() {
   }
 
   const [freePostsUsed, isPaid] = await Promise.all([
-    countGenerationHistoryForUser(userEmail),
+    countGenerationHistoryForUser(userEmail, { since: getUsageWindowStart() }),
     hasActiveSubscription(userEmail)
   ]);
 
@@ -162,7 +166,7 @@ export async function requireGenerationAccess(action: TrialAction): Promise<Acce
           freePostsUsed: status.freePostsUsed,
           isPaid: status.isPaid,
           allowed: false,
-          message: "You’ve used your free generations."
+          message: "You’ve used your 3 free generations this month. Upgrade to continue."
         }),
         error: "trial_exhausted"
       }
@@ -197,4 +201,3 @@ export function buildSuccessfulGenerationTrial(args: {
     allowed: true
   });
 }
-

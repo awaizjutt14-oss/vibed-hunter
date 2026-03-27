@@ -68,7 +68,7 @@ export function DashboardActions() {
           <span>
             {trialStatus.remaining_free_generations > 0
               ? `Free generations left: ${trialStatus.remaining_free_generations} / ${trialStatus.free_posts_limit}`
-              : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations`}
+              : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations this month`}
           </span>
         )}
       </div>
@@ -84,7 +84,7 @@ export function DashboardActions() {
       </div>
       {isTrialExhausted ? (
         <Link href="/settings" className="text-sm text-primary underline-offset-4 hover:underline">
-          You’ve used your 3 free generations. Upgrade to continue.
+          You’ve used your 3 free generations this month. Upgrade to continue.
         </Link>
       ) : null}
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}

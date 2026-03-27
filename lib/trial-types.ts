@@ -1,4 +1,5 @@
-export const FREE_POSTS_LIMIT = 5;
+export const FREE_POSTS_LIMIT = 3;
+export const FREE_POSTS_WINDOW_DAYS = 30;
 
 export type TrialStatusPayload = {
   allowed: boolean;

@@ -235,7 +235,7 @@ export async function fetchRecentGenerationHistory(userEmail?: string | null) {
   }>;
 }
 
-export async function countGenerationHistoryForUser(userEmail?: string | null) {
+export async function countGenerationHistoryForUser(userEmail?: string | null, options?: { since?: Date }) {
   const normalizedEmail = userEmail?.trim().toLowerCase();
   if (!normalizedEmail) {
     console.info("Generation history count skipped: missing user email.");
@@ -254,10 +254,16 @@ export async function countGenerationHistoryForUser(userEmail?: string | null) {
     return 0;
   }
 
-  const { count, error } = await supabase
+  let query = supabase
     .from("generation_history" as any)
     .select("id", { count: "exact", head: true })
     .eq("user_email", normalizedEmail);
+
+  if (options?.since) {
+    query = query.gte("created_at", options.since.toISOString());
+  }
+
+  const { count, error } = await query;
 
   if (error) {
     console.error("Generation history count error:", error);

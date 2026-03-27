@@ -916,13 +916,13 @@ function TrialStatusPanel({
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Free Trial</p>
           <p className="mt-2 text-base font-semibold text-white">
             {exhausted
-              ? "You’ve used your 3 free generations."
+              ? "You’ve used your 3 free generations this month."
               : `Free generations left: ${status.remaining_free_generations} / ${status.free_posts_limit}`}
           </p>
           <p className="mt-1 text-sm text-slate-400">
             {exhausted
               ? "Upgrade to keep generating premium post packages."
-              : `You’ve used ${status.free_posts_used} of ${status.free_posts_limit} free generations.`}
+              : `You’ve used ${status.free_posts_used} of ${status.free_posts_limit} free generations this month.`}
           </p>
         </div>
         <div className="flex items-center gap-3">

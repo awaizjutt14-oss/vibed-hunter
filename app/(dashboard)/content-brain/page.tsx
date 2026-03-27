@@ -107,7 +107,7 @@ export default function ContentBrainPage() {
                 <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1">
                   {trialStatus.remaining_free_generations > 0
                     ? `Free generations left: ${trialStatus.remaining_free_generations} / ${trialStatus.free_posts_limit}`
-                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations`}
+                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations this month`}
                 </span>
               )}
               {isTrialExhausted ? (
@@ -144,7 +144,7 @@ export default function ContentBrainPage() {
             Tap Find Content to generate three daily ideas for 12:30 PM, 6:30 PM, and 9:15 PM.
           </p>
           {isTrialExhausted ? (
-            <p className="mt-3 text-sm text-amber-300">You’ve used your 3 free generations. Upgrade to continue.</p>
+            <p className="mt-3 text-sm text-amber-300">You’ve used your 3 free generations this month. Upgrade to continue.</p>
           ) : null}
           {error ? <p className="mt-4 text-sm text-red-500">{error}</p> : null}
         </Card>

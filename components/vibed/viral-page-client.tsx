@@ -100,7 +100,7 @@ export function ViralPageClient() {
                 <span className="rounded-full border border-white/10 bg-background/40 px-3 py-1">
                   {trialStatus.remaining_free_generations > 0
                     ? `Free generations left: ${trialStatus.remaining_free_generations} / ${trialStatus.free_posts_limit}`
-                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations`}
+                    : `You’ve used ${trialStatus.free_posts_used} of ${trialStatus.free_posts_limit} free generations this month`}
                 </span>
               )}
               {isTrialExhausted ? (
@@ -156,7 +156,7 @@ export function ViralPageClient() {
           </div>
         </div>
         {isTrialExhausted ? (
-          <p className="mt-3 text-sm text-amber-300">You’ve used your free generations.</p>
+          <p className="mt-3 text-sm text-amber-300">You’ve used your 3 free generations this month. Upgrade to continue.</p>
         ) : null}
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </Card>
@@ -201,4 +201,3 @@ function formatAll(r: Result) {
     `Hashtags: ${r.hashtags.join(" ")}`
   ].join("\n");
 }
-
