@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { recordSuccessfulGeneration, requireGenerationAccess } from "@/lib/generation-access";
+import { buildSuccessfulGenerationTrial, requireGenerationAccess } from "@/lib/generation-access";
+import { saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
 
@@ -96,7 +97,22 @@ function normalizeIdeas(raw: unknown): HuntIdea[] {
 
 export async function GET(request: Request) {
   let access: Awaited<ReturnType<typeof requireGenerationAccess>> | null = null;
-  const usageEventId = new URL(request.url).searchParams.get("usageEventId")?.trim() || undefined;
+
+  async function savePostsAndBuildTrial(posts: HuntIdea[]) {
+    if (!access || !access.allowed) return null;
+    const leadPost = posts[0];
+    const saveResult = await saveGenerationToDatabase({
+      userEmail: access.userEmail,
+      input: posts.map((post) => `${post.time}: ${post.idea}`).join("\n"),
+      hook: leadPost?.hook ?? "Daily content idea package",
+      caption: leadPost?.caption ?? "Three daily post ideas."
+    }).catch(() => null);
+    return buildSuccessfulGenerationTrial({
+      freePostsUsed: access.freePostsUsed,
+      isPaid: access.isPaid,
+      generationSaved: saveResult?.ok
+    });
+  }
 
   try {
     access = await requireGenerationAccess("hunt");
@@ -105,13 +121,10 @@ export async function GET(request: Request) {
     }
 
     if (isPlaceholderKey(process.env.OPENAI_API_KEY)) {
-      const trial = await recordSuccessfulGeneration({
-        actor: access.actor,
-        usage: access.usage,
-        action: "hunt",
-        usageEventId
-      });
-      return NextResponse.json({ posts: fallbackIdeas(), ...trial });
+      const posts = fallbackIdeas();
+      const trial = await savePostsAndBuildTrial(posts);
+      console.info("Content Brain generation success.", { userEmail: access.userEmail, mode: "fallback" });
+      return NextResponse.json({ posts, ...trial });
     }
 
     const prompt = `
@@ -166,31 +179,20 @@ Rules:
     try {
       data = JSON.parse(text) as { posts?: unknown };
     } catch {
-      const trial = await recordSuccessfulGeneration({
-        actor: access.actor,
-        usage: access.usage,
-        action: "hunt",
-        usageEventId
-      });
-      return NextResponse.json({ posts: fallbackIdeas(), ...trial });
+      const posts = fallbackIdeas();
+      const trial = await savePostsAndBuildTrial(posts);
+      return NextResponse.json({ posts, ...trial });
     }
 
-    const trial = await recordSuccessfulGeneration({
-      actor: access.actor,
-      usage: access.usage,
-      action: "hunt",
-      usageEventId
-    });
-    return NextResponse.json({ posts: normalizeIdeas(data.posts), ...trial });
+    const posts = normalizeIdeas(data.posts);
+    const trial = await savePostsAndBuildTrial(posts);
+    console.info("Content Brain generation success.", { userEmail: access.userEmail, mode: "openai" });
+    return NextResponse.json({ posts, ...trial });
   } catch {
     if (access?.allowed) {
-      const trial = await recordSuccessfulGeneration({
-        actor: access.actor,
-        usage: access.usage,
-        action: "hunt",
-        usageEventId
-      });
-      return NextResponse.json({ posts: fallbackIdeas(), ...trial });
+      const posts = fallbackIdeas();
+      const trial = await savePostsAndBuildTrial(posts);
+      return NextResponse.json({ posts, ...trial });
     }
     return NextResponse.json({ posts: fallbackIdeas() });
   }

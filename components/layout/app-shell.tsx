@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bookmark, Settings, Sparkles } from "lucide-react";
 import { auth, signOut } from "@/auth";
+import { AuthGate } from "@/components/auth/auth-gate";
 import { SyncUserOnLogin } from "@/components/auth/sync-user-on-login";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
@@ -12,6 +13,14 @@ const navItems = [
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const session = await auth().catch(() => null);
+
+  if (!session?.user?.email) {
+    return (
+      <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+        <AuthGate />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">

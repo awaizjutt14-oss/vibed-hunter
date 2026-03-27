@@ -1,7 +1,8 @@
-export const FREE_POSTS_LIMIT = 3;
+export const FREE_POSTS_LIMIT = 5;
 
 export type TrialStatusPayload = {
   allowed: boolean;
+  authRequired?: boolean;
   paywall?: boolean;
   message?: string;
   free_posts_used: number;
@@ -10,4 +11,3 @@ export type TrialStatusPayload = {
   subscription_status: string;
   remaining_free_generations: number;
 };
-

@@ -234,3 +234,35 @@ export async function fetchRecentGenerationHistory(userEmail?: string | null) {
     created_at?: string;
   }>;
 }
+
+export async function countGenerationHistoryForUser(userEmail?: string | null) {
+  const normalizedEmail = userEmail?.trim().toLowerCase();
+  if (!normalizedEmail) {
+    console.info("Generation history count skipped: missing user email.");
+    return 0;
+  }
+
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    console.error("Generation history count skipped: Supabase client is not configured.");
+    return 0;
+  }
+
+  const tableReady = await ensureGenerationHistoryTableAvailable();
+  if (!tableReady) {
+    console.info("Generation history count skipped: generation_history table unavailable.", { userEmail: normalizedEmail });
+    return 0;
+  }
+
+  const { count, error } = await supabase
+    .from("generation_history" as any)
+    .select("id", { count: "exact", head: true })
+    .eq("user_email", normalizedEmail);
+
+  if (error) {
+    console.error("Generation history count error:", error);
+    return 0;
+  }
+
+  return Number(count ?? 0);
+}

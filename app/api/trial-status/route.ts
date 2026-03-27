@@ -4,7 +4,9 @@ import { getCurrentTrialStatus } from "@/lib/generation-access";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const { trial } = await getCurrentTrialStatus();
-  return NextResponse.json(trial);
+  const status = await getCurrentTrialStatus();
+  if (!status.authenticated) {
+    return NextResponse.json(status.trial, { status: 401 });
+  }
+  return NextResponse.json(status.trial);
 }
-

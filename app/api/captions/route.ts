@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { recordSuccessfulGeneration, requireGenerationAccess } from "@/lib/generation-access";
+import { buildSuccessfulGenerationTrial, requireGenerationAccess } from "@/lib/generation-access";
+import { saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,12 +40,18 @@ export async function POST(req: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!hasUsableOpenAIKey(apiKey)) {
     // No key in env; return a safe fallback so the app works in demo mode
-    const trial = await recordSuccessfulGeneration({
-      actor: access.actor,
-      usage: access.usage,
-      action: "viral",
-      usageEventId
+    const saveResult = await saveGenerationToDatabase({
+      userEmail: access.userEmail,
+      input: topic,
+      hook: fallback.hook,
+      caption: fallback.caption
+    }).catch(() => null);
+    const trial = buildSuccessfulGenerationTrial({
+      freePostsUsed: access.freePostsUsed,
+      isPaid: access.isPaid,
+      generationSaved: saveResult?.ok
     });
+    console.info("Caption generation success.", { userEmail: access.userEmail, mode: "fallback" });
     return NextResponse.json({
       ...fallback,
       note: "Using demo fallback (missing or placeholder OPENAI_API_KEY)",
@@ -115,29 +122,47 @@ Return JSON only.`;
     }
 
     if (!parsed || !parsed.hook || !parsed.caption) {
-      const trial = await recordSuccessfulGeneration({
-        actor: access.actor,
-        usage: access.usage,
-        action: "viral",
-        usageEventId
+      const saveResult = await saveGenerationToDatabase({
+        userEmail: access.userEmail,
+        input: topic,
+        hook: fallback.hook,
+        caption: fallback.caption
+      }).catch(() => null);
+      const trial = buildSuccessfulGenerationTrial({
+        freePostsUsed: access.freePostsUsed,
+        isPaid: access.isPaid,
+        generationSaved: saveResult?.ok
       });
+      console.info("Caption generation success.", { userEmail: access.userEmail, mode: "parse-fallback" });
       return NextResponse.json({ ...fallback, note: "Fallback used (parse failed)", ...trial });
     }
 
-    const trial = await recordSuccessfulGeneration({
-      actor: access.actor,
-      usage: access.usage,
-      action: "viral",
-      usageEventId
+    const normalized = normalizeOutput(parsed);
+    const saveResult = await saveGenerationToDatabase({
+      userEmail: access.userEmail,
+      input: topic,
+      hook: normalized.hook,
+      caption: normalized.caption
+    }).catch(() => null);
+    const trial = buildSuccessfulGenerationTrial({
+      freePostsUsed: access.freePostsUsed,
+      isPaid: access.isPaid,
+      generationSaved: saveResult?.ok
     });
-    return NextResponse.json({ ...normalizeOutput(parsed), ...trial });
+    console.info("Caption generation success.", { userEmail: access.userEmail, mode: "openai" });
+    return NextResponse.json({ ...normalized, ...trial });
   } catch (err) {
     console.error("caption API error", err);
-    const trial = await recordSuccessfulGeneration({
-      actor: access.actor,
-      usage: access.usage,
-      action: "viral",
-      usageEventId
+    const saveResult = await saveGenerationToDatabase({
+      userEmail: access.userEmail,
+      input: topic,
+      hook: fallback.hook,
+      caption: fallback.caption
+    }).catch(() => null);
+    const trial = buildSuccessfulGenerationTrial({
+      freePostsUsed: access.freePostsUsed,
+      isPaid: access.isPaid,
+      generationSaved: saveResult?.ok
     });
     return NextResponse.json({ ...fallback, note: "Fallback used (API error)", ...trial });
   }

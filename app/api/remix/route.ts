@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { auth } from "@/auth";
-import { recordSuccessfulGeneration, requireGenerationAccess } from "@/lib/generation-access";
+import { buildSuccessfulGenerationTrial, requireGenerationAccess } from "@/lib/generation-access";
 import { fetchRecentGenerationHistory, saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
@@ -331,7 +330,6 @@ function buildHistoryContext(
 
 export async function POST(req: Request) {
   try {
-    const session = await auth().catch(() => null);
     const {
       input,
       action,
@@ -340,8 +338,7 @@ export async function POST(req: Request) {
       outputFormat,
       extraInstructions,
       vibedMode,
-      learningProfile,
-      usageEventId
+      learningProfile
     } = (await req.json()) as {
       input?: string;
       action?: string;
@@ -351,7 +348,6 @@ export async function POST(req: Request) {
       extraInstructions?: string;
       vibedMode?: boolean;
       learningProfile?: string;
-      usageEventId?: string;
     };
 
     const trimmedInput = input?.trim();
@@ -364,7 +360,7 @@ export async function POST(req: Request) {
       return NextResponse.json(access.body, { status: access.status });
     }
 
-    const history = await fetchRecentGenerationHistory(session?.user?.email).catch(() => []);
+    const history = await fetchRecentGenerationHistory(access.userEmail).catch(() => []);
 
     if (isPlaceholderKey(process.env.OPENAI_API_KEY)) {
       const fallback: RemixApiResponse = asApiResponse(
@@ -376,7 +372,7 @@ export async function POST(req: Request) {
         })
       );
       const saveResult = await saveGenerationToDatabase({
-        userEmail: session?.user?.email,
+        userEmail: access.userEmail,
         input: trimmedInput,
         hook: fallback.hook,
         caption: fallback.caption
@@ -390,12 +386,12 @@ export async function POST(req: Request) {
           };
         }
       }
-      const trial = await recordSuccessfulGeneration({
-        actor: access.actor,
-        usage: access.usage,
-        action: "remix",
-        usageEventId: usageEventId?.trim()
+      const trial = buildSuccessfulGenerationTrial({
+        freePostsUsed: access.freePostsUsed,
+        isPaid: access.isPaid,
+        generationSaved: saveResult?.ok
       });
+      console.info("Remix generation success.", { userEmail: access.userEmail, mode: "fallback" });
       return NextResponse.json({ ...fallback, ...trial });
     }
 
@@ -591,7 +587,7 @@ ${trimmedInput}
     console.error("RAW OUTPUT TEXT:", text);
     const data: RemixApiResponse = safeJsonFromText(text);
     const saveResult = await saveGenerationToDatabase({
-      userEmail: session?.user?.email,
+      userEmail: access.userEmail,
       input: trimmedInput,
       hook: typeof data.hook === "string" ? data.hook : "",
       caption: typeof data.caption === "string" ? data.caption : ""
@@ -605,14 +601,15 @@ ${trimmedInput}
         };
       }
     }
-    const trial = await recordSuccessfulGeneration({
-      actor: access.actor,
-      usage: access.usage,
-      action: "remix",
-      usageEventId: usageEventId?.trim()
+    const trial = buildSuccessfulGenerationTrial({
+      freePostsUsed: access.freePostsUsed,
+      isPaid: access.isPaid,
+      generationSaved: saveResult?.ok
     });
+    console.info("Remix generation success.", { userEmail: access.userEmail, mode: "openai" });
     return NextResponse.json({ ...data, ...trial });
   } catch (error: any) {
+    console.error("Remix generation error.", error);
     return NextResponse.json(emptyResponse());
   }
 }
