@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Cpu,
+  Drill,
   Orbit,
   RadioTower,
   Sparkles,
@@ -58,6 +59,36 @@ const ecosystem = [
   }
 ] as const;
 
+const previews = [
+  {
+    title: "Viral Tech",
+    subtitle: "AI tool demos, wild interfaces, future utilities",
+    accent: "from-emerald-300/30 via-emerald-400/10 to-transparent"
+  },
+  {
+    title: "Machines",
+    subtitle: "Precision motion, satisfying parts, industrial beauty",
+    accent: "from-cyan-300/25 via-cyan-400/10 to-transparent"
+  },
+  {
+    title: "Satisfying Engineering",
+    subtitle: "Clean mechanisms, hidden process, perfect outcomes",
+    accent: "from-emerald-200/20 via-white/5 to-transparent"
+  },
+  {
+    title: "Future Concepts",
+    subtitle: "Ideas that feel too advanced to be real",
+    accent: "from-lime-300/20 via-emerald-300/10 to-transparent"
+  }
+] as const;
+
+const whyVibed = [
+  "Built for the attention economy",
+  "Designed for modern platforms",
+  "Focused on visual-first storytelling",
+  "Made for fast-moving creators"
+] as const;
+
 export default function LandingPage() {
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -69,7 +100,7 @@ export default function LandingPage() {
       </div>
 
       <div className="relative mx-auto flex w-full max-w-[86rem] flex-col gap-14 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="vibed-glass vibed-glow-ring sticky top-4 z-20 rounded-[2rem] px-5 py-4 sm:px-6">
+        <header className="vibed-glass vibed-glow-ring sticky top-4 z-20 rounded-[2rem] px-5 py-4 backdrop-blur-xl sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
               <div className="relative flex h-14 w-14 items-center justify-center rounded-[1.35rem] border border-emerald-300/15 bg-[linear-gradient(180deg,rgba(73,255,182,0.14),rgba(73,255,182,0.05))] text-primary shadow-[0_18px_40px_rgba(73,255,182,0.14)]">
@@ -78,20 +109,33 @@ export default function LandingPage() {
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.34em] text-emerald-200/60">Vibed Media</p>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">Modern Media Brand</h1>
+                  <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">Vibed Media</h1>
                   <span className="hidden rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline-flex">
                     Brand Ecosystem
                   </span>
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild variant="secondary" className="rounded-full">
-                <Link href="#ecosystem">Explore Vibed Media</Link>
-              </Button>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <nav className="flex flex-wrap items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                {[
+                  { href: "#top", label: "Home" },
+                  { href: "#content-preview", label: "Content" },
+                  { href: "#ecosystem", label: "Ecosystem" },
+                  { href: "https://app.vibed.media", label: "Vibed Hunter" }
+                ].map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className="rounded-full px-4 py-2.5 text-sm text-muted-foreground transition-all duration-300 hover:bg-white/[0.05] hover:text-white"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
               <Button asChild className="rounded-full px-6">
                 <Link href="https://app.vibed.media">
-                  Open Vibed Hunter
+                  Open App
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -99,7 +143,7 @@ export default function LandingPage() {
           </div>
         </header>
 
-        <section className="grid gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
+        <section id="top" className="grid gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
           <div className="space-y-8 pt-6 sm:pt-10">
             <span className="vibed-badge border-emerald-300/18 bg-emerald-300/[0.08] text-emerald-100/85">
               <Sparkles className="h-3.5 w-3.5" />
@@ -125,6 +169,10 @@ export default function LandingPage() {
               <Button asChild variant="secondary" className="h-12 rounded-full px-6 text-base">
                 <Link href="https://app.vibed.media">Open Vibed Hunter</Link>
               </Button>
+            </div>
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(134,239,172,0.85)]" />
+              Built for creators and modern media pages
             </div>
           </div>
 
@@ -155,6 +203,39 @@ export default function LandingPage() {
           </Card>
         </section>
 
+        <section id="content-preview" className="space-y-5 pt-2">
+          <div className="max-w-2xl space-y-2">
+            <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/70">Content Preview</p>
+            <h3 className="text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">
+              Content that stops the scroll
+            </h3>
+            <p className="text-sm leading-7 text-slate-400">
+              A preview of the visual language behind Vibed Media: tech, machines, engineering, gadgets, and future ideas built to feel instantly watchable.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {previews.map((preview, index) => (
+              <Card
+                key={preview.title}
+                className="group overflow-hidden rounded-[1.7rem] border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.014))] p-0 shadow-[0_20px_70px_rgba(0,0,0,0.24)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/18"
+              >
+                <div className={`relative aspect-[4/5] overflow-hidden bg-gradient-to-br ${preview.accent}`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.14),transparent_24%),linear-gradient(180deg,rgba(7,10,16,0.18),rgba(6,8,12,0.88))]" />
+                  <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/75">
+                    Reel 0{index + 1}
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <div className="rounded-[1.25rem] border border-white/10 bg-black/28 p-4 backdrop-blur">
+                      <p className="text-lg font-semibold tracking-[-0.03em] text-white">{preview.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-300">{preview.subtitle}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+
         <section id="about" className="grid gap-6 pt-2 lg:grid-cols-[0.95fr_1.05fr]">
           <Card className="rounded-[1.9rem] border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.042),rgba(255,255,255,0.016))] p-7 backdrop-blur-md">
             <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/70">About Vibed Media</p>
@@ -172,6 +253,29 @@ export default function LandingPage() {
               sharp ideas, premium execution, and content that feels native to the internet people actually watch.
             </p>
           </Card>
+        </section>
+
+        <section id="why-vibed" className="grid gap-6 pt-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <Card className="rounded-[1.9rem] border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(73,255,182,0.11),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.042),rgba(255,255,255,0.016))] p-7 backdrop-blur-md">
+            <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/70">Why Vibed Media</p>
+            <h3 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">
+              Built with the speed and taste modern media actually needs
+            </h3>
+            <p className="mt-4 text-sm leading-7 text-slate-400">
+              Vibed Media is not built like a legacy publication. It is designed for attention, clarity, and the kind of visual-first storytelling that wins on modern platforms.
+            </p>
+          </Card>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {whyVibed.map((point, index) => (
+              <Card
+                key={point}
+                className="rounded-[1.6rem] border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.016))] p-6 backdrop-blur-md"
+              >
+                <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-200/70">0{index + 1}</p>
+                <p className="mt-3 text-xl font-semibold tracking-[-0.03em] text-white">{point}</p>
+              </Card>
+            ))}
+          </div>
         </section>
 
         <section id="pillars" className="space-y-5 pt-4">
@@ -263,7 +367,7 @@ export default function LandingPage() {
           <Card className="rounded-[2rem] border-emerald-300/14 bg-[radial-gradient(circle_at_top_left,rgba(73,255,182,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-8 text-center shadow-[0_30px_100px_rgba(0,0,0,0.3)] backdrop-blur-md sm:p-10">
             <p className="text-xs uppercase tracking-[0.24em] text-emerald-200/70">Final CTA</p>
             <h3 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">
-              Follow the brand. Explore the ecosystem. Open the tool when you are ready.
+              Follow the brand. Use the system. Build better content.
             </h3>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
               Vibed Media is the brand. Vibed Hunter is one part of the system. Together they shape a more intentional
@@ -272,15 +376,12 @@ export default function LandingPage() {
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <Button asChild className="h-12 rounded-full px-6 text-base">
                 <Link href="https://www.instagram.com/vibed.media/" target="_blank" rel="noreferrer">
-                  Follow the page
+                  Follow Vibed Media
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="secondary" className="h-12 rounded-full px-6 text-base">
-                <Link href="#ecosystem">Explore the ecosystem</Link>
-              </Button>
-              <Button asChild variant="secondary" className="h-12 rounded-full px-6 text-base">
-                <Link href="https://app.vibed.media">Try the tool</Link>
+                <Link href="https://app.vibed.media">Open Vibed Hunter</Link>
               </Button>
             </div>
           </Card>
