@@ -2,6 +2,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { NextAuthConfig } from "next-auth";
 import { prisma } from "@/lib/db/prisma";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { env } from "@/lib/utils/env";
 
 const providers = [];
@@ -23,9 +24,16 @@ providers.push(
       password: { label: "Password", type: "password" }
     },
     async authorize(credentials) {
+      const email = credentials?.email?.toString().trim().toLowerCase();
+      const password = credentials?.password?.toString() ?? "";
+
+      if (!email || !password) {
+        throw new Error("Please enter your email and password.");
+      }
+
       if (
-        credentials?.email === env.DEMO_ADMIN_EMAIL &&
-        credentials?.password === env.DEMO_ADMIN_PASSWORD
+        email === env.DEMO_ADMIN_EMAIL &&
+        password === env.DEMO_ADMIN_PASSWORD
       ) {
         return {
           id: "demo-admin",
@@ -33,7 +41,46 @@ providers.push(
           name: "Demo Admin"
         };
       }
-      return null;
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (!existingUser) {
+        const createdUser = await prisma.user.create({
+          data: {
+            email,
+            passwordHash: hashPassword(password),
+            role: "USER"
+          }
+        });
+
+        console.info("Email auth signup success.", { email });
+
+        return {
+          id: createdUser.id,
+          email: createdUser.email,
+          name: createdUser.name ?? createdUser.email
+        };
+      }
+
+      if (!existingUser.passwordHash) {
+        throw new Error("This email uses Google sign-in. Continue with Google instead.");
+      }
+
+      const isValidPassword = verifyPassword(password, existingUser.passwordHash);
+
+      if (!isValidPassword) {
+        throw new Error("Incorrect password. Try again.");
+      }
+
+      console.info("Email auth login success.", { email });
+
+      return {
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name ?? existingUser.email
+      };
     }
   })
 );

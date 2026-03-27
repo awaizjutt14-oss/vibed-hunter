@@ -11,10 +11,12 @@ export function AuthGate() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState<"google" | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   async function handleGoogle() {
     setLoading("google");
     setError(null);
+    setMessage(null);
     try {
       await signIn("google", { redirectTo: "/" });
     } catch {
@@ -27,6 +29,7 @@ export function AuthGate() {
     event.preventDefault();
     setLoading("email");
     setError(null);
+    setMessage(null);
 
     const result = await signIn("credentials", {
       email,
@@ -35,12 +38,15 @@ export function AuthGate() {
     });
 
     if (result?.error) {
-      setError("Email login failed. Check your credentials and try again.");
+      setError(result.error);
       setLoading(null);
       return;
     }
 
-    window.location.href = "/";
+    setMessage("Success. Opening your workspace...");
+    window.setTimeout(() => {
+      window.location.href = "/";
+    }, 350);
   }
 
   return (
@@ -98,7 +104,7 @@ export function AuthGate() {
 
               <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-500">
                 <span className="h-px flex-1 bg-white/10" />
-                Optional email login
+                Email access
                 <span className="h-px flex-1 bg-white/10" />
               </div>
 
@@ -118,12 +124,16 @@ export function AuthGate() {
                   className="h-12 w-full rounded-[1.2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,13,19,0.92),rgba(7,10,15,0.88))] px-4 text-sm text-white outline-none transition-all duration-300 placeholder:text-slate-500 focus:border-emerald-300/25 focus:shadow-[0_0_0_4px_rgba(73,255,182,0.08)]"
                 />
                 <Button type="submit" variant="secondary" disabled={loading !== null} className="h-12 w-full rounded-[1.2rem] text-base">
-                  {loading === "email" ? "Signing in..." : "Continue with email"}
+                  {loading === "email" ? "Checking your account..." : "Continue with email"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </form>
 
               {error ? <p className="text-sm text-red-400">{error}</p> : null}
+              {!error && message ? <p className="text-sm text-emerald-300">{message}</p> : null}
+              <p className="text-xs leading-6 text-slate-500">
+                New email? We&apos;ll create your account automatically. Existing email? We&apos;ll sign you in.
+              </p>
             </div>
           </div>
         </div>
@@ -131,4 +141,3 @@ export function AuthGate() {
     </main>
   );
 }
-
