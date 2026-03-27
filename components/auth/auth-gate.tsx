@@ -50,9 +50,9 @@ export function AuthGate() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="relative flex min-h-screen animate-[fadeIn_700ms_ease-out] items-center justify-center px-4 py-10">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(73,255,182,0.08),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(124,242,255,0.08),transparent_24%),linear-gradient(180deg,#05070a_0%,#070b10_44%,#040608_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(74,222,128,0.12),transparent_60%),radial-gradient(circle_at_top_left,rgba(73,255,182,0.08),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(124,242,255,0.08),transparent_24%),linear-gradient(180deg,#05070a_0%,#070b10_44%,#040608_100%)]" />
         <div className="absolute left-[7%] top-[8%] h-[28rem] w-[28rem] rounded-full bg-emerald-400/14 blur-[140px]" />
         <div className="absolute left-[18%] top-[22%] h-[18rem] w-[18rem] rounded-full bg-lime-300/8 blur-[110px]" />
         <div className="absolute right-[8%] top-[14%] h-[22rem] w-[22rem] rounded-full bg-cyan-300/8 blur-[140px]" />
@@ -68,8 +68,12 @@ export function AuthGate() {
               VIBED MEDIA CREATOR OS
             </span>
             <div className="relative mt-8 max-w-xl space-y-6">
-              <h1 className="text-4xl font-semibold tracking-[-0.065em] text-white sm:text-6xl sm:leading-[1.02]">
-                Build viral content like a machine.
+              <h1 className="text-[2.85rem] font-semibold tracking-[-0.075em] text-white sm:text-[4.35rem] sm:leading-[0.98]">
+                Build{" "}
+                <span className="bg-[linear-gradient(90deg,#ffffff_10%,#86efac_52%,#d1fae5_100%)] bg-clip-text text-transparent">
+                  viral content
+                </span>{" "}
+                like a machine.
               </h1>
               <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-[1.02rem]">
                 Vibed Hunter turns rough ideas into hooks, captions, and post-ready angles built for modern media
@@ -77,15 +81,15 @@ export function AuthGate() {
               </p>
             </div>
             <div className="relative mt-10 grid gap-4 md:grid-cols-3">
-              <div className="rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur">
+              <div className="rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/20 hover:shadow-[0_18px_45px_rgba(16,24,40,0.35),0_0_0_1px_rgba(134,239,172,0.08)]">
                 <p className="text-sm font-semibold tracking-[-0.02em] text-white">Hook-first output</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">Built to stop scrolling.</p>
               </div>
-              <div className="rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur">
+              <div className="rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/20 hover:shadow-[0_18px_45px_rgba(16,24,40,0.35),0_0_0_1px_rgba(134,239,172,0.08)]">
                 <p className="text-sm font-semibold tracking-[-0.02em] text-white">Brand memory</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">Learns your style over time.</p>
               </div>
-              <div className="rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur">
+              <div className="rounded-[1.45rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/20 hover:shadow-[0_18px_45px_rgba(16,24,40,0.35),0_0_0_1px_rgba(134,239,172,0.08)]">
                 <p className="text-sm font-semibold tracking-[-0.02em] text-white">Monthly access</p>
                 <p className="mt-2 text-sm leading-6 text-slate-400">Your free usage follows your account.</p>
               </div>
@@ -106,7 +110,7 @@ export function AuthGate() {
               </div>
             </div>
 
-            <div className="mt-8 rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur sm:p-7">
+            <div className="mt-8 rounded-[1.7rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.018))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38),0_0_0_1px_rgba(255,255,255,0.03),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md sm:p-7">
               <h2 className="text-3xl font-semibold tracking-[-0.05em] text-white sm:text-[2.15rem]">
                 Enter your creator workspace
               </h2>
@@ -115,7 +119,11 @@ export function AuthGate() {
               </p>
 
               <div className="mt-8 space-y-4">
-              <Button onClick={handleGoogle} disabled={loading !== null} className="h-12 w-full rounded-[1.2rem] text-base">
+              <Button
+                onClick={handleGoogle}
+                disabled={loading !== null}
+                className="h-12 w-full rounded-[1.2rem] text-base transition-all duration-300 hover:scale-[1.05] hover:shadow-[0_14px_36px_rgba(73,255,182,0.22)]"
+              >
                 {loading === "google" ? "Connecting..." : "Enter with Google"}
               </Button>
 
@@ -140,7 +148,12 @@ export function AuthGate() {
                   placeholder="Password"
                   className="h-12 w-full rounded-[1.2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(9,13,19,0.92),rgba(7,10,15,0.88))] px-4 text-sm text-white outline-none transition-all duration-300 placeholder:text-slate-500 focus:border-emerald-300/25 focus:shadow-[0_0_0_4px_rgba(73,255,182,0.08)]"
                 />
-                <Button type="submit" variant="secondary" disabled={loading !== null} className="h-12 w-full rounded-[1.2rem] text-base">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={loading !== null}
+                  className="h-12 w-full rounded-[1.2rem] text-base transition-all duration-300 hover:scale-[1.05] hover:shadow-[0_14px_36px_rgba(73,255,182,0.18)] motion-safe:animate-[softPulse_3.4s_ease-in-out_infinite]"
+                >
                   {loading === "email" ? "Checking your account..." : "Unlock with email"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
