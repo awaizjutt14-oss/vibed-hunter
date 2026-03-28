@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { isAllowedEmail } from "@/lib/access-control";
 import { FREE_POSTS_LIMIT, FREE_POSTS_WINDOW_DAYS, type TrialStatusPayload } from "@/lib/trial-types";
 import { countGenerationHistoryForUser } from "@/lib/supabase/user-store";
 
@@ -43,6 +44,8 @@ function buildTrialStatus(args: {
       args.message ??
       (args.authRequired
         ? "Sign in to continue."
+        : args.message
+          ? args.message
         : args.allowed
           ? undefined
           : "You’ve used your 3 free generations this month. Upgrade to continue."),
@@ -60,10 +63,15 @@ async function getAuthenticatedUserEmail() {
 
   if (!email) {
     console.warn("Generation access denied: auth missing.");
-    return null;
+    return { email: null, restricted: false };
   }
 
-  return email;
+  if (!isAllowedEmail(email)) {
+    console.warn("Generation access denied: email not in allowed list.", { email });
+    return { email: null, restricted: true };
+  }
+
+  return { email, restricted: false };
 }
 
 async function hasActiveSubscription(_userEmail: string) {
@@ -89,9 +97,10 @@ function isRateLimited(userEmail: string, action: TrialAction) {
 
 export async function getCurrentTrialStatus() {
   const userEmail = await getAuthenticatedUserEmail();
-  if (!userEmail) {
+  if (!userEmail.email) {
     return {
       authenticated: false as const,
+      restricted: userEmail.restricted,
       userEmail: null,
       isPaid: false,
       freePostsUsed: 0,
@@ -99,19 +108,21 @@ export async function getCurrentTrialStatus() {
         freePostsUsed: 0,
         isPaid: false,
         allowed: false,
-        authRequired: true
+        authRequired: !userEmail.restricted,
+        message: userEmail.restricted ? "This workspace is currently private. Access is limited to approved accounts." : undefined
       })
     };
   }
 
   const [freePostsUsed, isPaid] = await Promise.all([
-    countGenerationHistoryForUser(userEmail, { since: getUsageWindowStart() }),
-    hasActiveSubscription(userEmail)
+    countGenerationHistoryForUser(userEmail.email, { since: getUsageWindowStart() }),
+    hasActiveSubscription(userEmail.email)
   ]);
 
   return {
     authenticated: true as const,
-    userEmail,
+    restricted: false,
+    userEmail: userEmail.email,
     isPaid,
     freePostsUsed,
     trial: buildTrialStatus({
@@ -128,10 +139,10 @@ export async function requireGenerationAccess(action: TrialAction): Promise<Acce
   if (!status.authenticated || !status.userEmail) {
     return {
       allowed: false,
-      status: 401,
+      status: status.restricted ? 403 : 401,
       body: {
         ...status.trial,
-        error: "auth_required"
+        error: status.restricted ? "access_restricted" : "auth_required"
       }
     };
   }

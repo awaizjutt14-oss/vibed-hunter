@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Bookmark, Settings, Sparkles } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { AuthGate } from "@/components/auth/auth-gate";
+import { AccessRestricted } from "@/components/auth/access-restricted";
 import { SyncUserOnLogin } from "@/components/auth/sync-user-on-login";
 import { Button } from "@/components/ui/button";
+import { isAllowedEmail } from "@/lib/access-control";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
@@ -18,6 +20,14 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
         <AuthGate />
+      </div>
+    );
+  }
+
+  if (!isAllowedEmail(session.user.email)) {
+    return (
+      <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+        <AccessRestricted />
       </div>
     );
   }

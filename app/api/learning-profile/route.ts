@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
+import { isAllowedEmail } from "@/lib/access-control";
 import { prisma } from "@/lib/db/prisma";
 import {
   applyLearningFeedback,
@@ -170,6 +171,15 @@ function withSessionCookie(response: NextResponse, sessionId?: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await auth().catch(() => null);
+  const sessionEmail = session?.user?.email?.trim().toLowerCase();
+  if (sessionEmail && !isAllowedEmail(sessionEmail)) {
+    return NextResponse.json(
+      { error: "access_restricted", message: "This workspace is currently private. Access is limited to approved accounts." },
+      { status: 403 }
+    );
+  }
+
   const { userKey, newSessionId, anonymousUserKey } = await resolveLearningUser(request);
   const profile = await loadProfileForUser(userKey, anonymousUserKey);
   const response = NextResponse.json({ profile });
@@ -177,6 +187,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth().catch(() => null);
+  const sessionEmail = session?.user?.email?.trim().toLowerCase();
+  if (sessionEmail && !isAllowedEmail(sessionEmail)) {
+    return NextResponse.json(
+      { error: "access_restricted", message: "This workspace is currently private. Access is limited to approved accounts." },
+      { status: 403 }
+    );
+  }
+
   const { userKey, newSessionId, anonymousUserKey } = await resolveLearningUser(request);
   const body = (await request.json().catch(() => ({}))) as {
     action?: "interaction" | "feedback" | "toggle" | "reset";

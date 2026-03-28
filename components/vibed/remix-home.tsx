@@ -52,11 +52,37 @@ type RemixResult = {
   is_paid?: boolean;
   subscription_status?: string;
   remaining_free_generations?: number;
+  post_type?: string;
+  total_slides?: number;
+  cover_headline?: string;
+  cover_subheadline?: string;
+  slides?: Array<{
+    slide_number: number;
+    headline: string;
+    body_text: string;
+    highlight_words: string[];
+    visual_direction: string;
+  }>;
+  final_cta?: string;
 };
 
 const platforms = ["Instagram", "TikTok", "YouTube Shorts", "Facebook"];
 const tones = ["viral", "storytelling", "authority", "warm", "luxury", "educational", "funny"];
 const outputFormats = ["Caption", "Hook", "Full post", "Script", "Carousel text", "Story text"];
+const contentFormats = [
+  {
+    label: "Breaking News",
+    description: "For fast updates, business changes, tech moves, and major developments."
+  },
+  {
+    label: "Story / Explainer",
+    description: "For animal stories, machine stories, unusual facts, and narrative-style reveals."
+  },
+  {
+    label: "List / Utility",
+    description: "For body hacks, quick tips, facts, and save-worthy carousel posts."
+  }
+] as const;
 const presets = [
   { label: "Viral", tone: "viral", extraInstructions: "stronger curiosity, sharper hook, faster payoff" },
   { label: "Informative", tone: "educational", extraInstructions: "clearer explanation, useful details, clean authority" },
@@ -84,6 +110,7 @@ export function RemixHome() {
   const searchParams = useSearchParams();
   const [content, setContent] = useState("");
   const [platform, setPlatform] = useState(platforms[0]);
+  const [contentFormat, setContentFormat] = useState<(typeof contentFormats)[number]["label"] | "">("");
   const [tone, setTone] = useState(tones[0]);
   const [outputFormat, setOutputFormat] = useState(outputFormats[0]);
   const [extraInstructions, setExtraInstructions] = useState("");
@@ -188,7 +215,24 @@ export function RemixHome() {
         "This fits a curiosity-first slot because it has clear visual pull and strong save potential.",
       suggestedAudio:
         payload.suggestedAudio?.trim() || "cinematic suspense | futuristic ambient | replay tension beat",
-      contentType: payload.contentType?.trim() || "Curiosity"
+      contentType: payload.contentType?.trim() || "Curiosity",
+      post_type: payload.post_type?.trim() || contentFormat || "Story / Explainer",
+      total_slides: payload.total_slides ?? (Array.isArray(payload.slides) ? payload.slides.length : 0),
+      cover_headline: payload.cover_headline?.trim() || "Build a clearer carousel angle",
+      cover_subheadline: payload.cover_subheadline?.trim() || "One strong idea per slide.",
+      slides:
+        payload.slides?.length
+          ? payload.slides
+          : [
+              {
+                slide_number: 1,
+                headline: "Start with the strongest hook",
+                body_text: "Lead with the main point in the clearest possible words.",
+                highlight_words: ["strongest", "hook"],
+                visual_direction: "Use the most visually striking frame as the cover."
+              }
+            ],
+      final_cta: payload.final_cta?.trim() || payload.cta?.trim() || "Follow for more post-ready ideas."
     };
   }
 
@@ -220,6 +264,7 @@ export function RemixHome() {
     extraInstructions: string;
     vibedMode: boolean;
     usageEventId: string;
+    contentFormat: (typeof contentFormats)[number]["label"];
   }>) {
     const input = (overrides?.input ?? content).trim();
 
@@ -229,6 +274,7 @@ export function RemixHome() {
       body: JSON.stringify({
         input,
         action: "Turn into Vibed style",
+        contentFormat: overrides?.contentFormat ?? contentFormat,
         platform,
         tone: overrides?.tone ?? tone,
         outputFormat: overrides?.outputFormat ?? outputFormat,
@@ -366,6 +412,11 @@ export function RemixHome() {
       return;
     }
 
+    if (!contentFormat) {
+      setError("Choose a content format first.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -450,11 +501,10 @@ export function RemixHome() {
                   Creator Input
                 </p>
                 <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white sm:text-[2rem]">
-                  Design your next post
+                  Build a carousel post
                 </h2>
                 <p className="max-w-xl text-sm leading-6 text-slate-400">
-                  Drop in a rough idea, script fragment, or post concept. Vibed Hunter will reshape it into a premium
-                  short-form package.
+                  Choose a format, generate slide-by-slide content, and turn ideas into post-ready carousel drafts.
                 </p>
               </div>
 
@@ -468,10 +518,33 @@ export function RemixHome() {
                 />
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="grid gap-5 lg:grid-cols-2">
                 <Field label="Platform">
                   <Select value={platform} onChange={setPlatform} options={platforms} />
                 </Field>
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-100">Content format</label>
+                  <div className="grid gap-3">
+                    {contentFormats.map((format) => (
+                      <button
+                        key={format.label}
+                        type="button"
+                        onClick={() => setContentFormat(format.label)}
+                        className={`rounded-[1.2rem] border px-4 py-4 text-left transition-all duration-300 ${
+                          contentFormat === format.label
+                            ? "border-emerald-300/28 bg-emerald-400/[0.08] shadow-[0_18px_34px_rgba(73,255,182,0.12)]"
+                            : "border-white/10 bg-[linear-gradient(180deg,rgba(9,13,19,0.92),rgba(7,10,15,0.88))] hover:border-white/18 hover:bg-white/[0.04]"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-white">{format.label}</p>
+                        <p className="mt-1 text-sm leading-6 text-slate-400">{format.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
                     onClick={transform}
@@ -482,7 +555,7 @@ export function RemixHome() {
                   </Button>
                   <Button
                     onClick={generateHooks}
-                    disabled={hooksLoading || isTrialExhausted}
+                    disabled={hooksLoading || isTrialExhausted || !contentFormat}
                     variant="secondary"
                     className="h-12 rounded-[1.2rem] px-5 text-base"
                   >
@@ -617,6 +690,69 @@ export function RemixHome() {
 
       {result ? (
         <section className="space-y-4">
+          {contentFormat && result.slides?.length ? (
+            <Card className="rounded-[2rem] p-5 sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
+                    Carousel Draft
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <p className="text-xl font-semibold tracking-[-0.03em] text-white">Slide-by-slide output</p>
+                    <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-100">
+                      {result.post_type}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <CopyButton label="Copy caption" value={result.caption ?? ""} variant="ghost" />
+                  <CopyButton label="Copy full carousel" value={buildFullCarousel(result)} variant="ghost" />
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                <Section title="Cover Headline" content={result.cover_headline ?? ""} highlight />
+                <Section title="Cover Subheadline" content={result.cover_subheadline ?? ""} />
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                {result.slides.map((slide) => (
+                  <div key={slide.slide_number} className="vibed-panel rounded-[1.35rem] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/70">
+                        Slide {slide.slide_number}
+                      </p>
+                      <CopyButton label="Copy slide" value={buildSlideCopy(slide)} variant="ghost" />
+                    </div>
+                    <p className="mt-3 text-xl font-semibold tracking-[-0.03em] text-white">{slide.headline}</p>
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">{slide.body_text}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {slide.highlight_words.map((word) => (
+                        <span
+                          key={`${slide.slide_number}-${word}`}
+                          className="rounded-full border border-amber-300/18 bg-amber-300/10 px-2.5 py-1 text-xs font-semibold text-amber-100"
+                        >
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-[1rem] border border-white/8 bg-black/20 px-3 py-3 text-sm text-slate-400">
+                      <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        Visual direction
+                      </span>
+                      <span className="mt-2 block">{slide.visual_direction}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                <Section title="Caption" content={result.caption ?? ""} copyLabel="Copy caption" />
+                <Section title="Final CTA" content={result.final_cta ?? ""} copyLabel="Copy CTA" />
+              </div>
+            </Card>
+          ) : null}
+
           <Card className="rounded-[2rem] p-5 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -800,6 +936,30 @@ function buildFullResult(result: RemixResult) {
     `Suggested Audio: ${result.suggestedAudio ?? ""}`,
     `Content Type: ${result.contentType ?? ""}`
   ].join("\n\n");
+}
+
+function buildSlideCopy(slide: NonNullable<RemixResult["slides"]>[number]) {
+  return [
+    `Slide ${slide.slide_number}`,
+    `Headline: ${slide.headline}`,
+    `Body: ${slide.body_text}`,
+    `Highlight words: ${slide.highlight_words.join(", ")}`,
+    `Visual direction: ${slide.visual_direction}`
+  ].join("\n");
+}
+
+function buildFullCarousel(result: RemixResult) {
+  return [
+    `Post Type: ${result.post_type ?? ""}`,
+    `Total Slides: ${result.total_slides ?? result.slides?.length ?? 0}`,
+    `Cover Headline: ${result.cover_headline ?? ""}`,
+    result.cover_subheadline ? `Cover Subheadline: ${result.cover_subheadline}` : "",
+    ...(result.slides ?? []).map((slide) => buildSlideCopy(slide)),
+    `Caption:\n${result.caption ?? ""}`,
+    `Final CTA: ${result.final_cta ?? ""}`
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { buildSuccessfulGenerationTrial, requireGenerationAccess } from "@/lib/generation-access";
-import { fetchRecentGenerationHistory, saveGenerationToDatabase } from "@/lib/supabase/user-store";
+import { fetchRecentGenerationHistory, saveCarouselDraftToDatabase, saveGenerationToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
 
@@ -28,6 +28,27 @@ type RemixSectionResult = {
     nicheMatch: number;
   };
 };
+
+type CarouselFormat = "Breaking News" | "Story / Explainer" | "List / Utility";
+
+type CarouselSlide = {
+  slide_number: number;
+  headline: string;
+  body_text: string;
+  highlight_words: string[];
+  visual_direction: string;
+};
+
+type CarouselPayload = {
+  post_type: string;
+  total_slides: number;
+  cover_headline: string;
+  cover_subheadline?: string;
+  slides: CarouselSlide[];
+  final_cta: string;
+};
+
+type RemixOutput = RemixSectionResult & Partial<CarouselPayload>;
 
 type GenerationHistoryDebug = {
   generationHistorySaved?: boolean;
@@ -70,6 +91,210 @@ function normalizeHashtags(tags: string[]) {
   return cleaned.slice(0, 4);
 }
 
+function clampBody(text: string, maxWords = 20) {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, maxWords)
+    .join(" ");
+}
+
+function normalizeSlide(raw: Partial<CarouselSlide>, slideNumber: number): CarouselSlide {
+  const headline = clampBody(String(raw.headline ?? `Slide ${slideNumber}`), 8);
+  const body_text = clampBody(String(raw.body_text ?? ""), 22);
+  const visual_direction = clampBody(String(raw.visual_direction ?? "Clean visual showing the main idea clearly."), 18);
+  const highlight_words = Array.isArray(raw.highlight_words)
+    ? raw.highlight_words.map((item) => String(item).trim()).filter(Boolean).slice(0, 4)
+    : headline
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2);
+
+  return {
+    slide_number: slideNumber,
+    headline,
+    body_text,
+    highlight_words,
+    visual_direction
+  };
+}
+
+function buildCarouselFallback(input: string, format: CarouselFormat): CarouselPayload {
+  const seed = input.trim().split(/\n+/)[0]?.trim() || "This topic";
+
+  if (format === "Breaking News") {
+    const slides = [
+      normalizeSlide(
+        {
+          headline: `${seed} just shifted fast`,
+          body_text: "Lead with the biggest development in the clearest possible words.",
+          highlight_words: ["shifted", "fast"],
+          visual_direction: "Bold cover with urgent headline and one strong visual from the story."
+        },
+        1
+      ),
+      normalizeSlide(
+        {
+          headline: "What happened first",
+          body_text: "Give the most important fact people need immediately.",
+          highlight_words: ["important", "fact"],
+          visual_direction: "Use a cropped visual detail or screenshot with minimal annotation."
+        },
+        2
+      ),
+      normalizeSlide(
+        {
+          headline: "What changes now",
+          body_text: "Explain the impact in simple language people can understand fast.",
+          highlight_words: ["changes", "now"],
+          visual_direction: "Pair short text with a visual showing before versus after."
+        },
+        3
+      ),
+      normalizeSlide(
+        {
+          headline: "Why it matters",
+          body_text: "Land the takeaway with a clear consequence or future implication.",
+          highlight_words: ["why", "matters"],
+          visual_direction: "Use a cleaner final slide with a strong summary line."
+        },
+        4
+      )
+    ];
+
+    return {
+      post_type: format,
+      total_slides: slides.length,
+      cover_headline: clampHook(`${seed} is changing faster than expected`),
+      cover_subheadline: "Fast update for the people who need the signal early.",
+      slides,
+      final_cta: "Follow for sharper tech and business updates."
+    };
+  }
+
+  if (format === "Story / Explainer") {
+    const slides = [
+      normalizeSlide(
+        {
+          headline: `Why ${seed} feels unreal`,
+          body_text: "Open with the tension, not the explanation.",
+          highlight_words: ["feels", "unreal"],
+          visual_direction: "Use the most dramatic or strange visual first."
+        },
+        1
+      ),
+      normalizeSlide(
+        {
+          headline: "The detail people miss",
+          body_text: "Introduce the first surprising fact in simple language.",
+          highlight_words: ["detail", "miss"],
+          visual_direction: "Zoom into one part of the scene or mechanism."
+        },
+        2
+      ),
+      normalizeSlide(
+        {
+          headline: "This is where it changes",
+          body_text: "Escalate the story with a stronger reveal or turning point.",
+          highlight_words: ["changes", "reveal"],
+          visual_direction: "Shift to a more dramatic angle or motion moment."
+        },
+        3
+      ),
+      normalizeSlide(
+        {
+          headline: "What it actually means",
+          body_text: "Land the takeaway in one line people can remember.",
+          highlight_words: ["actually", "means"],
+          visual_direction: "Minimal final frame with one clean statement."
+        },
+        4
+      )
+    ];
+
+    return {
+      post_type: format,
+      total_slides: slides.length,
+      cover_headline: clampHook(`${seed} looks simple until you notice this`),
+      cover_subheadline: "One escalating reveal per slide.",
+      slides,
+      final_cta: "Follow for more stories that feel impossible at first."
+    };
+  }
+
+  const slides = [
+    normalizeSlide(
+      {
+        headline: `Ways ${seed} gets better`,
+        body_text: "Start with a save-worthy list hook that feels useful immediately.",
+        highlight_words: ["ways", "better"],
+        visual_direction: "Bright cover text over a strong object or lifestyle visual."
+      },
+      1
+    ),
+    normalizeSlide(
+      {
+        headline: "Tip 1",
+        body_text: "One clean practical point per slide.",
+        highlight_words: ["tip", "one"],
+        visual_direction: "Minimal text with one simple supporting visual."
+      },
+      2
+    ),
+    normalizeSlide(
+      {
+        headline: "Tip 2",
+        body_text: "Keep it fast, useful, and easy to save.",
+        highlight_words: ["fast", "save"],
+        visual_direction: "Use a second close-up, screen, or product detail."
+      },
+      3
+    ),
+    normalizeSlide(
+      {
+        headline: "Final takeaway",
+        body_text: "End with the strongest useful line and a reason to revisit the post.",
+        highlight_words: ["final", "takeaway"],
+        visual_direction: "Simple wrap-up slide with high-contrast text."
+      },
+      4
+    )
+  ];
+
+  return {
+    post_type: format,
+    total_slides: slides.length,
+    cover_headline: clampHook(`${seed} made much simpler to understand`),
+    cover_subheadline: "Fast, useful, and built to be saved.",
+    slides,
+    final_cta: "Follow for more save-worthy creator carousels."
+  };
+}
+
+function normalizeCarouselPayload(raw: Partial<CarouselPayload>, format: CarouselFormat, input: string): CarouselPayload {
+  const fallback = buildCarouselFallback(input, format);
+  const slides = Array.isArray(raw.slides) && raw.slides.length
+    ? raw.slides.map((slide, index) => normalizeSlide(slide, index + 1))
+    : fallback.slides;
+
+  return {
+    post_type: typeof raw.post_type === "string" ? raw.post_type.trim() || format : format,
+    total_slides: slides.length,
+    cover_headline:
+      typeof raw.cover_headline === "string" && raw.cover_headline.trim()
+        ? clampBody(raw.cover_headline, 10)
+        : fallback.cover_headline,
+    cover_subheadline:
+      typeof raw.cover_subheadline === "string" && raw.cover_subheadline.trim()
+        ? clampBody(raw.cover_subheadline, 18)
+        : fallback.cover_subheadline,
+    slides,
+    final_cta:
+      typeof raw.final_cta === "string" && raw.final_cta.trim() ? raw.final_cta.trim() : fallback.final_cta
+  };
+}
+
 function asApiResponse(result: RemixSectionResult) {
   return {
     hook: result.hook,
@@ -88,8 +313,20 @@ function asApiResponse(result: RemixSectionResult) {
     story_text: result.story
   } satisfies Record<string, unknown>;
 }
-
-type RemixApiResponse = ReturnType<typeof asApiResponse> & GenerationHistoryDebug;
+type RemixApiResponse = ReturnType<typeof asApiResponse> &
+  Partial<CarouselPayload> &
+  GenerationHistoryDebug & {
+    carouselDraftSaved?: boolean;
+    carouselDraftError?: {
+      reason: "missing_client" | "table_unavailable" | "insert_failed" | "missing_fields";
+      details?: {
+        message?: string;
+        code?: string;
+        details?: string;
+        hint?: string;
+      };
+    };
+  };
 
 function scorePackage(input: string, result: Partial<RemixSectionResult>) {
   const text = `${input} ${result.hook ?? ""} ${result.caption ?? ""}`.toLowerCase();
@@ -172,7 +409,7 @@ function extractSection(raw: string, labels: string[]) {
   return raw.match(pattern)?.[1]?.trim() ?? "";
 }
 
-function parseStructuredResult(outputText: string): RemixSectionResult {
+function parseStructuredResult(outputText: string, format?: CarouselFormat, input?: string): RemixOutput {
   let parsed: Partial<{
     hook: string;
     caption: string;
@@ -194,7 +431,7 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
   try {
     parsed = JSON.parse(text);
   } catch {
-    return {
+    const base = {
       hook: "",
       caption: text,
       pinnedComment: "",
@@ -204,6 +441,8 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
       ...inferPackaging(text),
       internalScores: scorePackage(text, { caption: text })
     };
+
+    return format && input ? { ...base, ...buildCarouselFallback(input, format) } : base;
   }
 
   if (parsed) {
@@ -211,7 +450,7 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
       ? normalizeHashtags(parsed.hashtags)
       : normalizeHashtags(String(parsed.hashtags ?? "").split(/\s+/));
 
-    return {
+    const base = {
       hook: clampHook(typeof parsed.hook === "string" ? parsed.hook : ""),
       caption: typeof parsed.caption === "string" ? parsed.caption.trim() : "",
       pinnedComment:
@@ -246,9 +485,11 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
               caption: typeof parsed.caption === "string" ? parsed.caption : ""
             })
     };
+
+    return format && input ? { ...base, ...normalizeCarouselPayload(parsed as Partial<CarouselPayload>, format, input) } : base;
   }
 
-  return {
+  const base = {
     hook: "",
     caption: text,
     pinnedComment: "",
@@ -258,6 +499,8 @@ function parseStructuredResult(outputText: string): RemixSectionResult {
     ...inferPackaging(text),
     internalScores: scorePackage(text, { caption: text })
   };
+
+  return format && input ? { ...base, ...buildCarouselFallback(input, format) } : base;
 }
 
 function emptyResponse(caption = "Something went wrong. Try again.") {
@@ -284,14 +527,14 @@ function emptyResponse(caption = "Something went wrong. Try again.") {
   };
 }
 
-function safeJsonFromText(text: string) {
-  let data: RemixSectionResult;
+function safeJsonFromText(text: string, format?: CarouselFormat, input?: string) {
+  let data: RemixOutput;
 
   try {
-    data = JSON.parse(text) as RemixSectionResult;
+    data = JSON.parse(text) as RemixOutput;
   } catch (e) {
     console.error("JSON PARSE FAILED:", text);
-    data = {
+    const base = {
       hook: "",
       caption: `⚠️ RAW: ${text || "Something went wrong. Try again."}`,
       pinnedComment: "",
@@ -301,9 +544,14 @@ function safeJsonFromText(text: string) {
       ...inferPackaging(text),
       internalScores: scorePackage(text, { caption: text })
     };
+    data = format && input ? { ...base, ...buildCarouselFallback(input, format) } : base;
   }
 
-  return asApiResponse(parseStructuredResult(JSON.stringify(data)));
+  const structured = parseStructuredResult(JSON.stringify(data), format, input);
+  return {
+    ...asApiResponse(structured),
+    ...(format && input ? normalizeCarouselPayload(structured, format, input) : {})
+  };
 }
 
 function buildHistoryContext(
@@ -338,7 +586,8 @@ export async function POST(req: Request) {
       outputFormat,
       extraInstructions,
       vibedMode,
-      learningProfile
+      learningProfile,
+      contentFormat
     } = (await req.json()) as {
       input?: string;
       action?: string;
@@ -348,11 +597,16 @@ export async function POST(req: Request) {
       extraInstructions?: string;
       vibedMode?: boolean;
       learningProfile?: string;
+      contentFormat?: CarouselFormat;
     };
 
     const trimmedInput = input?.trim();
     if (!trimmedInput) {
       return NextResponse.json(emptyResponse("Input is required."), { status: 400 });
+    }
+
+    if (!contentFormat) {
+      return NextResponse.json(emptyResponse("Select a content format to build a carousel."), { status: 400 });
     }
 
     const access = await requireGenerationAccess("remix");
@@ -371,11 +625,22 @@ export async function POST(req: Request) {
           vibedMode: Boolean(vibedMode)
         })
       );
+      Object.assign(fallback, buildCarouselFallback(trimmedInput, contentFormat));
       const saveResult = await saveGenerationToDatabase({
         userEmail: access.userEmail,
         input: trimmedInput,
         hook: fallback.hook,
         caption: fallback.caption
+      }).catch(() => null);
+      const carouselSave = await saveCarouselDraftToDatabase({
+        userEmail: access.userEmail,
+        format: contentFormat,
+        input: trimmedInput,
+        coverHeadline: fallback.cover_headline ?? "",
+        coverSubheadline: fallback.cover_subheadline,
+        slides: fallback.slides ?? [],
+        caption: fallback.caption,
+        finalCta: fallback.final_cta ?? fallback.cta
       }).catch(() => null);
       if (saveResult) {
         fallback.generationHistorySaved = saveResult.ok;
@@ -383,6 +648,15 @@ export async function POST(req: Request) {
           fallback.generationHistoryError = {
             reason: saveResult.reason,
             details: "error" in saveResult ? saveResult.error : undefined
+          };
+        }
+      }
+      if (carouselSave) {
+        fallback.carouselDraftSaved = carouselSave.ok;
+        if (!carouselSave.ok) {
+          fallback.carouselDraftError = {
+            reason: carouselSave.reason,
+            details: "error" in carouselSave ? carouselSave.error : undefined
           };
         }
       }
@@ -536,6 +810,57 @@ Return ONLY valid JSON with these keys:
   "contentType": ""
 }
 
+Also include a carousel package in the same JSON with these keys:
+{
+  "post_type": "",
+  "total_slides": 0,
+  "cover_headline": "",
+  "cover_subheadline": "",
+  "slides": [
+    {
+      "slide_number": 1,
+      "headline": "",
+      "body_text": "",
+      "highlight_words": [],
+      "visual_direction": ""
+    }
+  ],
+  "final_cta": ""
+}
+
+Carousel rules:
+- Selected format: ${contentFormat}
+- The carousel must feel like a premium Instagram media carousel.
+- Keep one idea per slide.
+- body_text must be short and skimmable, never verbose.
+- highlight_words should be 2 to 4 words worth emphasizing in design.
+- visual_direction should tell a designer what clip, frame, screenshot, or visual treatment fits the slide.
+
+Breaking News:
+- 4 to 6 slides
+- Slide 1: major headline / biggest development
+- Slide 2: most important fact
+- Slide 3: second important fact
+- Slide 4: what changes / impact
+- Slide 5 optional: why it matters
+- Final slide optional: CTA
+- Tone: direct, high-impact, media-page style
+
+Story / Explainer:
+- 5 to 7 slides
+- Slide 1: strong hook
+- Slides 2 to 5: one escalating fact per slide
+- Slide 6 optional: biggest reveal / takeaway
+- Final slide optional: CTA
+- Tone: curiosity-driven, narrative, surprising
+
+List / Utility:
+- 6 to 8 slides
+- Slide 1: list hook
+- Slides 2 to 7: one tip or fact per slide
+- Final slide: CTA
+- Tone: useful, fast, save-worthy, simple
+
 Additional package rules:
 - hook: 6 to 10 words, max 1 tasteful emoji, no generic phrasing, high curiosity, strong outcome, and it must feel unexpected.
 - caption: follow the caption system above, keep it easy to skim, use short punchy lines, remove filler sentences, add one curiosity gap, and end with an engagement question.
@@ -566,6 +891,7 @@ Context:
 - Tone: ${tone ?? "viral"}
 - Output format preference: ${outputFormat ?? "Full post"}
 - Vibed Mode: ${vibedMode ? "On" : "Off"}
+- Content format: ${contentFormat}
 - Extra instructions: ${extraInstructions?.trim() || "None"}
 
 User content:
@@ -585,12 +911,27 @@ ${trimmedInput}
     const text = response.output_text || "";
     console.error("FULL RESPONSE:", JSON.stringify(response, null, 2));
     console.error("RAW OUTPUT TEXT:", text);
-    const data: RemixApiResponse = safeJsonFromText(text);
+    const data: RemixApiResponse = safeJsonFromText(text, contentFormat, trimmedInput);
     const saveResult = await saveGenerationToDatabase({
       userEmail: access.userEmail,
       input: trimmedInput,
       hook: typeof data.hook === "string" ? data.hook : "",
       caption: typeof data.caption === "string" ? data.caption : ""
+    }).catch(() => null);
+    const carouselSave = await saveCarouselDraftToDatabase({
+      userEmail: access.userEmail,
+      format: contentFormat,
+      input: trimmedInput,
+      coverHeadline: typeof data.cover_headline === "string" ? data.cover_headline : "",
+      coverSubheadline: typeof data.cover_subheadline === "string" ? data.cover_subheadline : undefined,
+      slides: Array.isArray(data.slides) ? data.slides : [],
+      caption: typeof data.caption === "string" ? data.caption : "",
+      finalCta:
+        typeof data.final_cta === "string"
+          ? data.final_cta
+          : typeof data.cta === "string"
+            ? data.cta
+            : ""
     }).catch(() => null);
     if (saveResult) {
       data.generationHistorySaved = saveResult.ok;
@@ -598,6 +939,15 @@ ${trimmedInput}
         data.generationHistoryError = {
           reason: saveResult.reason,
           details: "error" in saveResult ? saveResult.error : undefined
+        };
+      }
+    }
+    if (carouselSave) {
+      data.carouselDraftSaved = carouselSave.ok;
+      if (!carouselSave.ok) {
+        data.carouselDraftError = {
+          reason: carouselSave.reason,
+          details: "error" in carouselSave ? carouselSave.error : undefined
         };
       }
     }

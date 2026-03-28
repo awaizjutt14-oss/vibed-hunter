@@ -24,8 +24,26 @@ create table if not exists public.generation_history (
 );
 `;
 
+const CAROUSEL_DRAFTS_SETUP_SQL = `
+create extension if not exists pgcrypto;
+
+create table if not exists public.carousel_drafts (
+  id uuid primary key default gen_random_uuid(),
+  user_email text not null,
+  format text not null,
+  input text not null,
+  cover_headline text not null,
+  cover_subheadline text,
+  slides_json jsonb not null,
+  caption text not null,
+  final_cta text not null,
+  created_at timestamptz not null default now()
+);
+`;
+
 let usersTableChecked = false;
 let generationHistoryChecked = false;
+let carouselDraftsChecked = false;
 
 async function ensureUsersTableAvailable() {
   if (usersTableChecked) return true;
@@ -70,6 +88,29 @@ async function ensureGenerationHistoryTableAvailable() {
   }
 
   generationHistoryChecked = true;
+  return true;
+}
+
+async function ensureCarouselDraftsTableAvailable() {
+  if (carouselDraftsChecked) return true;
+
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    console.error("Supabase carousel_drafts check skipped: client is not configured.");
+    return false;
+  }
+
+  const { error } = await supabase.from("carousel_drafts").select("id", { count: "exact", head: true });
+  if (error) {
+    console.error("Supabase carousel_drafts table is not ready.", {
+      message: error.message,
+      hint: "Create public.carousel_drafts before saving carousel drafts.",
+      sql: CAROUSEL_DRAFTS_SETUP_SQL
+    });
+    return false;
+  }
+
+  carouselDraftsChecked = true;
   return true;
 }
 
@@ -233,6 +274,80 @@ export async function fetchRecentGenerationHistory(userEmail?: string | null) {
     caption: string;
     created_at?: string;
   }>;
+}
+
+export async function saveCarouselDraftToDatabase(args: {
+  userEmail?: string | null;
+  format: string;
+  input: string;
+  coverHeadline: string;
+  coverSubheadline?: string | null;
+  slides: unknown[];
+  caption: string;
+  finalCta: string;
+}) {
+  const userEmail = args.userEmail?.trim().toLowerCase();
+  const format = args.format.trim();
+  const input = args.input.trim();
+  const coverHeadline = args.coverHeadline.trim();
+  const coverSubheadline = args.coverSubheadline?.trim() || null;
+  const caption = args.caption.trim();
+  const finalCta = args.finalCta.trim();
+
+  if (!userEmail || !format || !input || !coverHeadline || !caption || !finalCta || !args.slides.length) {
+    console.error("saveCarouselDraftToDatabase skipped: missing required fields.", {
+      hasUserEmail: Boolean(userEmail),
+      hasFormat: Boolean(format),
+      hasInput: Boolean(input),
+      hasCoverHeadline: Boolean(coverHeadline),
+      hasSlides: Boolean(args.slides.length),
+      hasCaption: Boolean(caption),
+      hasFinalCta: Boolean(finalCta)
+    });
+    return { ok: false, reason: "missing_fields" as const };
+  }
+
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    console.error("saveCarouselDraftToDatabase skipped: Supabase client is not configured.");
+    return { ok: false, reason: "missing_client" as const };
+  }
+
+  const tableReady = await ensureCarouselDraftsTableAvailable();
+  if (!tableReady) {
+    console.error("Supabase carousel draft save error: table unavailable.", { userEmail });
+    return { ok: false, reason: "table_unavailable" as const };
+  }
+
+  const { error } = await supabase.from("carousel_drafts" as any).insert([
+    {
+      user_email: userEmail,
+      format,
+      input,
+      cover_headline: coverHeadline,
+      cover_subheadline: coverSubheadline,
+      slides_json: args.slides,
+      caption,
+      final_cta: finalCta
+    }
+  ] as any);
+
+  if (error) {
+    console.error("Supabase carousel draft insert error:", error);
+    return {
+      ok: false,
+      reason: "insert_failed" as const,
+      error: {
+        message: error.message,
+        code: "code" in error ? error.code : undefined,
+        details: "details" in error ? error.details : undefined,
+        hint: "hint" in error ? error.hint : undefined
+      }
+    };
+  }
+
+  console.info("Saved carousel draft.", { userEmail, format });
+  return { ok: true as const };
 }
 
 export async function countGenerationHistoryForUser(userEmail?: string | null, options?: { since?: Date }) {

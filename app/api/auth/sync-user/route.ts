@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { isAllowedEmail } from "@/lib/access-control";
 import { saveUserToDatabase } from "@/lib/supabase/user-store";
 
 export const runtime = "nodejs";
@@ -14,6 +15,18 @@ export async function POST(request: Request) {
   if (!email) {
     console.error("Sync user skipped: no authenticated user email.");
     return NextResponse.json({ ok: false, error: "No authenticated user." }, { status: 401 });
+  }
+
+  if (!isAllowedEmail(email)) {
+    console.error("Sync user blocked: email not allowed.", { email });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "access_restricted",
+        message: "This workspace is currently private. Access is limited to approved accounts."
+      },
+      { status: 403 }
+    );
   }
 
   if (sessionEmail && bodyEmail && sessionEmail !== bodyEmail) {
